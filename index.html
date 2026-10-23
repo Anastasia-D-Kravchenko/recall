@@ -1,0 +1,1078 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Recall</title>
+<meta name="theme-color" content="#162240">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Recall">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Familjen+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: navy header bands (Brainscape-style), one 760px column on phones, sidebar + column on wide screens; study screen with a thumb-zone rating dock. */
+:root{
+  --band:#162240; --band-ink:#FFFFFF; --band-soft:#22335C; --band-muted:#AFC0E2;
+  --paper:#EEF1F6; --card:#FFFFFF; --ink:#15203A; --muted:#5A6479; --line:#D9DFEA; --soft:#E5EAF2;
+  --accent:#2E9FD8; --accent-ink:#FFFFFF; --accent-soft:#DDF0FA; --rule:#E9A3A3; --mark:#FFE58A;
+  --ok:#2F8F55; --bad:#C83E3A; --warn:#B7791F; --c0:#C3CBD9;
+  --tile:#162240; --c1:#A12D86; --c2:#F28B30; --c3:#E9BC22; --c4:#6FAA36; --c5:#2E9FD8;
+  --display:"Familjen Grotesk","Helvetica Neue",Arial,sans-serif;
+  --body:"Atkinson Hyperlegible","Segoe UI",system-ui,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+  --fs:1;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --band:#0F1830; --band-soft:#1B2848; --band-muted:#93A6CC;
+  --paper:#0B1222; --card:#16203A; --ink:#E6EBF4; --muted:#98A3BA; --line:#26324E; --soft:#1D2944;
+  --accent:#45B2E6; --accent-ink:#0B1222; --accent-soft:#163650; --rule:#7A3A3A; --mark:#5E5214;
+  --ok:#5CC484; --bad:#F07067; --warn:#E3B04B; --c0:#3A4766; --tile:#2A3B66; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --band:#0F1830; --band-soft:#1B2848; --band-muted:#93A6CC;
+  --paper:#0B1222; --card:#16203A; --ink:#E6EBF4; --muted:#98A3BA; --line:#26324E; --soft:#1D2944;
+  --accent:#45B2E6; --accent-ink:#0B1222; --accent-soft:#163650; --rule:#7A3A3A; --mark:#5E5214;
+  --ok:#5CC484; --bad:#F07067; --warn:#E3B04B; --c0:#3A4766; --tile:#2A3B66; color-scheme:dark}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--paper);color:var(--ink);font:16px/1.5 var(--body);-webkit-tap-highlight-color:transparent}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--band)}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+[hidden]{display:none!important}
+#app{min-height:100%;display:flex;flex-direction:column}
+.col{width:100%;max-width:760px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+h1,h2,h3{font-family:var(--display);line-height:1.15;margin:0;text-wrap:balance}
+h1{font-size:1.7rem;font-weight:700} h2{font-size:1.2rem;font-weight:700} h3{font-size:1rem;font-weight:600}
+.eyebrow{font:700 .72rem/1 var(--body);letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
+.muted{color:var(--muted)} .small{font-size:.86rem} .num{font-variant-numeric:tabular-nums}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap} .between{justify-content:space-between} .grow{flex:1;min-width:0}
+.stack{display:flex;flex-direction:column;gap:12px}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px}
+.section{display:flex;flex-direction:column;gap:10px;margin-top:22px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:48px;padding:0 18px;border-radius:999px;border:1.5px solid var(--line);background:var(--card);font-weight:700;text-decoration:none;color:inherit}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);letter-spacing:.06em;text-transform:uppercase}
+.btn.ghost{background:transparent;border-color:transparent}
+.btn.block{width:100%} .btn.sm{min-height:38px;padding:0 14px;font-size:.88rem}
+.btn:disabled{opacity:.45;cursor:default}
+.icon-btn{width:44px;height:44px;border-radius:12px;border:1px solid var(--line);background:var(--card);display:inline-grid;place-items:center;font-size:1.05rem;flex:none}
+.chip{font:600 .72rem/1 var(--mono);padding:4px 6px;border-radius:6px;background:var(--soft);color:var(--muted);white-space:nowrap}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:999px;background:var(--soft);font-size:.78rem;font-weight:700;white-space:nowrap}
+.pill.over{background:color-mix(in srgb,var(--c1) 16%,transparent);color:var(--c1)}
+.pill.exam{background:color-mix(in srgb,var(--c1) 18%,transparent);color:var(--c1)}
+.pill.active{background:var(--accent-soft);color:var(--accent)}
+.pill.maintain{background:var(--soft);color:var(--muted)}
+.pill.paused{background:transparent;border:1px dashed var(--line);color:var(--muted)}
+.pill.ok{background:color-mix(in srgb,var(--ok) 16%,transparent);color:var(--ok)}
+.pill.warn{background:color-mix(in srgb,var(--warn) 18%,transparent);color:var(--warn)}
+.cbar{display:flex;height:8px;border-radius:99px;overflow:hidden;background:var(--c0)} .cbar i{display:block;height:100%}
+.band{background:var(--band);color:var(--band-ink);padding-top:env(safe-area-inset-top,0px)}
+.band .col{padding-block:14px 18px}
+.bandtop{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.brand{display:flex;align-items:center;gap:10px;font:700 1.05rem var(--display)} .brand img{width:30px;height:30px;border-radius:8px}
+.sync{font-size:.75rem;color:var(--band-muted);display:flex;align-items:center;gap:6px;background:none;border:0;padding:6px}
+.sync i{width:8px;height:8px;border-radius:50%;background:var(--band-muted)}
+.sync[data-s="synced"] i{background:#5CC484} .sync[data-s="syncing"] i{background:#E9BC22} .sync[data-s="error"] i,.sync[data-s="offline"] i{background:#F07067}
+.band .icon-btn{background:var(--band-soft);border-color:transparent;color:var(--band-ink)}
+.hello{font:700 1.55rem/1.15 var(--display);margin-top:12px}
+.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}
+.kpi span{display:block;font-size:.66rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--band-muted)}
+.kpi b{font:700 1.45rem/1.1 var(--display);font-variant-numeric:tabular-nums}
+.studybar{display:flex;gap:10px;align-items:center;margin-top:16px} .studybar .btn.primary{flex:1;min-height:52px}
+.back{color:var(--band-muted);background:none;border:0;padding:0;font-weight:700;min-height:36px}
+.tabs{position:fixed;left:0;right:0;bottom:0;z-index:8;background:var(--card);border-top:1px solid var(--line);padding:0 env(safe-area-inset-right,0px) env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px)}
+.tabs nav{max-width:760px;margin:0 auto;display:grid;grid-template-columns:repeat(4,1fr)}
+.tabs button{border:0;background:none;min-height:60px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:.74rem;font-weight:700;color:var(--muted)}
+.tabs button[aria-current="page"]{color:var(--accent)} .tabs svg{width:22px;height:22px}
+main.col{padding-block:6px 110px}
+.subtabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-top:14px;overflow-x:auto}
+.subtabs button{flex:1;border:0;background:none;min-height:44px;font-weight:700;color:var(--muted);border-bottom:3px solid transparent;white-space:nowrap;padding:0 10px}
+.subtabs button[aria-pressed="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+.subj{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;width:100%;text-align:left;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px}
+.code{font:700 .9rem var(--mono);width:50px;height:50px;border-radius:12px;display:grid;place-items:center;background:var(--tile);color:#fff;flex:none}
+.right{text-align:right;font-size:.8rem;line-height:1.3} .right b{font-size:1rem;font-variant-numeric:tabular-nums}
+.testcard{display:flex;gap:12px;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:12px 14px}
+.days{min-width:58px;text-align:center;border-radius:12px;background:var(--accent-soft);color:var(--accent);padding:6px 4px}
+.days b{display:block;font:700 1.35rem/1 var(--display)} .days span{font-size:.66rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+.topic{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;padding:12px 2px;border-top:1px solid var(--line)}
+.topic:first-child{border-top:0}
+.check{width:26px;height:26px;accent-color:var(--accent)}
+.topic label{display:flex;flex-direction:column;gap:6px;min-width:0;cursor:pointer}
+.tbtn{border:0;background:none;color:var(--accent);font-weight:700;min-height:40px;padding:0 6px;text-decoration:none}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:999px;overflow:hidden;background:var(--card)}
+.seg button{border:0;background:none;min-height:36px;padding:0 14px;font-weight:700;font-size:.86rem}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+.seg.full{display:flex} .seg.full button{flex:1;min-height:44px}
+.ring{position:relative;display:grid;place-items:center} .ring svg{display:block}
+.ring .lbl{position:absolute;text-align:center} .ring .lbl b{display:block;font:700 2rem/1 var(--display);font-variant-numeric:tabular-nums}
+.ring .lbl span{font-size:.7rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+.statrow{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:13px 2px;border-top:1px solid var(--line)}
+.statrow b{font-variant-numeric:tabular-nums;font-size:1.02rem;text-align:right}
+.plan{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;width:100%;text-align:left;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:10px 12px}
+.heat{display:grid;grid-template-columns:repeat(12,1fr);grid-auto-flow:column;grid-template-rows:repeat(7,1fr);gap:3px}
+.heat i{display:block;aspect-ratio:1;border-radius:3px;background:var(--soft)}
+.goal{display:flex;align-items:center;gap:8px}
+.goal .gbar{flex:1;height:8px;border-radius:9px;background:var(--band-soft);overflow:hidden} .goal .gbar i{display:block;height:100%;background:#5CC484}
+/* study */
+.study{flex:1;display:flex;flex-direction:column;width:100%;max-width:760px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-top:env(safe-area-inset-top,0px)}
+.shead{position:sticky;top:env(safe-area-inset-top,0px);z-index:4;background:var(--paper);display:flex;align-items:center;gap:8px;padding-block:10px}
+.prog{flex:1;height:6px;border-radius:9px;background:var(--soft);overflow:hidden} .prog i{display:block;height:100%;background:var(--accent);transition:width .25s}
+.face{background:var(--card);border:1px solid var(--line);border-radius:18px;box-shadow:0 10px 30px -18px rgba(10,20,50,.45);overflow:hidden;margin-top:4px}
+.face .meta{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:12px 14px 0 18px;font-size:.78rem;color:var(--muted)}
+.face .q{padding:14px 18px 16px;border-bottom:2px solid var(--rule);font-size:calc(1.16rem * var(--fs));line-height:1.45;font-weight:700}
+.face .a{padding:14px 18px 18px;background-image:repeating-linear-gradient(transparent 0 31px,var(--soft) 31px 32px);background-position:0 12px;line-height:2rem;font-size:calc(1.04rem * var(--fs));overflow-wrap:anywhere}
+.face .a.hidden{display:grid;place-items:center;min-height:150px;color:var(--muted);background:none;line-height:1.4;text-align:center;cursor:pointer}
+.recall{font:700 .72rem var(--mono);padding:3px 7px;border-radius:999px;border:1.5px solid currentColor}
+.star{border:0;background:none;font-size:1.2rem;color:var(--muted);min-width:40px;min-height:40px}
+.star[aria-pressed="true"]{color:#E9BC22}
+.xpl{margin-top:12px;padding:12px 14px;border-radius:12px;background:var(--soft);line-height:1.5;font-size:calc(.97rem * var(--fs))}
+.xpl .eyebrow{display:block;margin-bottom:6px}
+.note{display:flex;align-items:center;gap:8px;margin-top:10px;padding:10px 14px;border-radius:12px;border:1px dashed var(--line);color:var(--ink);text-decoration:none;font-size:.92rem}
+.verdict{display:flex;align-items:center;gap:8px;font-weight:700;padding:10px 14px;border-radius:12px;margin-top:12px}
+.verdict.ok{background:color-mix(in srgb,var(--ok) 16%,transparent);color:var(--ok)}
+.verdict.no{background:color-mix(in srgb,var(--bad) 16%,transparent);color:var(--bad)}
+.cmdbox{width:100%;min-height:52px;margin-top:12px;border-radius:12px;border:1.5px solid var(--line);background:var(--card);padding:12px 14px;font:calc(.95rem * var(--fs)) var(--mono)}
+.diff{font:calc(.92rem * var(--fs))/1.7 var(--mono);overflow-wrap:anywhere} .diff .bad{background:color-mix(in srgb,var(--bad) 22%,transparent);border-radius:4px;padding:0 2px} .diff .miss{color:var(--bad);text-decoration:underline}
+.dock{position:sticky;bottom:0;background:var(--paper);padding-block:10px calc(12px + env(safe-area-inset-bottom,0px));margin-top:auto;z-index:4}
+.ask{text-align:center;font-weight:700;font-size:.9rem;margin-bottom:8px}
+.rate{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;justify-items:center}
+.rate div{display:flex;flex-direction:column;align-items:center;gap:4px}
+.rate button{width:min(64px,16vw);aspect-ratio:1;border-radius:50%;border:0;color:#fff;font:700 1.35rem var(--display);box-shadow:0 4px 0 rgba(0,0,0,.12)}
+.rate button:active{transform:translateY(2px);box-shadow:none}
+.rate small{font:600 .7rem var(--mono);color:var(--muted)}
+.rate .r1{background:var(--c1)}.rate .r2{background:var(--c2)}.rate .r3{background:var(--c3)}.rate .r4{background:var(--c4)}.rate .r5{background:var(--c5)}
+.ratelbl{display:flex;justify-content:space-between;font-size:.72rem;color:var(--muted);margin-top:4px;padding:0 4px}
+.tf{display:grid;grid-template-columns:1fr 1fr;gap:10px} .tf .btn{min-height:56px;border-radius:14px}
+.answerbox{width:100%;min-height:72px;margin-top:12px;border-radius:12px;border:1px solid var(--line);background:var(--card);padding:10px 12px;resize:vertical}
+.opt{display:block;width:100%;text-align:left;min-height:56px;padding:12px 14px;border-radius:14px;border:1.5px solid var(--line);background:var(--card);line-height:1.4}
+.opt.sel{border-color:var(--accent);background:var(--accent-soft)}
+.opt.right{border-color:var(--ok);background:color-mix(in srgb,var(--ok) 14%,var(--card))}
+.opt.wrong{border-color:var(--bad);background:color-mix(in srgb,var(--bad) 12%,var(--card))}
+.timer{font:700 1rem var(--mono);font-variant-numeric:tabular-nums;padding:6px 10px;border-radius:10px;background:var(--card);border:1px solid var(--line)}
+.timer.low{color:var(--bad);border-color:var(--bad)}
+.search{position:sticky;top:env(safe-area-inset-top,0px);z-index:4;background:var(--paper);padding-block:10px 8px}
+.search input{width:100%;min-height:52px;border-radius:14px;border:1.5px solid var(--line);background:var(--card);padding:0 16px;font-size:1.05rem}
+.filters{display:flex;gap:6px;overflow-x:auto;padding-top:8px;scrollbar-width:none}
+.filters button{flex:none;min-height:36px;padding:0 12px;border-radius:999px;border:1px solid var(--line);background:var(--card);font-size:.85rem;font-weight:700;display:inline-flex;align-items:center;gap:6px}
+.filters button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.hit{display:block;width:100%;text-align:left;background:var(--card);border:1px solid var(--line);border-left:5px solid var(--c0);border-radius:12px;padding:12px 14px}
+.hit .qq{font-weight:700;line-height:1.35}
+.hit .aa{color:var(--muted);font-size:.9rem;margin-top:4px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+mark{background:var(--mark);color:inherit;border-radius:3px;padding:0 1px}
+code{font:.9em var(--mono);background:var(--soft);padding:1px 5px;border-radius:5px;overflow-wrap:anywhere}
+.scrim{position:fixed;inset:0;background:rgba(6,10,22,.5);z-index:20;display:flex;align-items:flex-end;justify-content:center}
+.sheet{background:var(--paper);width:100%;max-width:760px;max-height:90%;overflow:auto;border-radius:22px 22px 0 0;padding:18px max(16px,env(safe-area-inset-right,0px)) calc(18px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+.field{display:flex;flex-direction:column;gap:6px}
+.field label{font-weight:700;font-size:.9rem}
+.field textarea,.field input,.field select{border:1.5px solid var(--line);border-radius:12px;background:var(--card);padding:10px 12px;min-height:48px}
+.field textarea{min-height:90px;resize:vertical}
+.slider{display:grid;grid-template-columns:60px 1fr 44px;gap:10px;align-items:center} .slider input{width:100%;accent-color:var(--accent)}
+.levels{display:flex;gap:8px;flex-wrap:wrap}
+.levels label{display:flex;align-items:center;gap:6px;padding:8px 12px;border-radius:999px;border:1.5px solid var(--line);background:var(--card);font-weight:700}
+.levels input{width:18px;height:18px}
+.dot{width:12px;height:12px;border-radius:50%;display:inline-block;flex:none}
+.chart{display:flex;align-items:flex-end;gap:4px;height:120px;padding-top:8px}
+.chart div{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;height:100%;justify-content:flex-end;min-width:0}
+.chart i{display:block;width:100%;background:var(--accent);border-radius:5px 5px 2px 2px;min-height:2px}
+.chart span{font:600 .62rem var(--mono);color:var(--muted)}
+table{width:100%;border-collapse:collapse;font-size:.9rem}
+th,td{text-align:left;padding:8px 6px;border-top:1px solid var(--line);vertical-align:top}
+th{font-size:.7rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
+.tablewrap{overflow-x:auto}
+.toggle{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0;border-top:1px solid var(--line)}
+.toggle:first-child{border-top:0}
+.toggle input[type=checkbox]{width:26px;height:26px;accent-color:var(--accent);flex:none}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(84px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--paper);padding:10px 16px;border-radius:12px;z-index:30;font-weight:700;max-width:90%}
+.login{flex:1;display:flex;flex-direction:column;justify-content:center;gap:16px;max-width:420px;margin:0 auto;width:100%;padding:24px max(16px,env(safe-area-inset-right,0px)) 24px max(16px,env(safe-area-inset-left,0px))}
+.login .logo{width:76px;height:76px;border-radius:18px}
+.err{color:var(--bad);font-weight:700;font-size:.9rem}
+@media (min-width:1000px){
+  .tabs{top:0;bottom:0;right:auto;width:200px;border-top:0;border-right:1px solid var(--line);padding:calc(16px + env(safe-area-inset-top,0px)) 10px 16px}
+  .tabs nav{display:flex;flex-direction:column;gap:4px}
+  .tabs button{flex-direction:row;justify-content:flex-start;gap:12px;min-height:46px;padding:0 14px;border-radius:12px;font-size:.95rem}
+  .tabs button[aria-current="page"]{background:var(--accent-soft)}
+  #app.withtabs{padding-left:200px}
+  main.col{padding-bottom:40px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="layer"></div>
+<script>
+(() => {
+"use strict";
+// ================================================================ config
+const RELAY = "https://br-holy-rain-b94kk7ad-recallauth.compute.c-7.eu-central-1.aws.neon.tech";
+const REST = "https://ep-small-queen-b9qynvby.apirest.c-7.eu-central-1.aws.neon.tech/neondb/rest/v1";
+const VAULT = "Obsidian-Vault";
+const DAY = 86400000, MIN = 60000, HOUR = 3600000;
+const now = () => Date.now();
+const today = () => Math.floor((Date.now() - new Date().getTimezoneOffset() * MIN - 4 * HOUR) / DAY);   // day rolls over at 4 am
+const dayOf = iso => Math.floor(Date.parse(iso + "T00:00:00Z") / DAY);
+const isoOf = d => new Date(d * DAY).toISOString().slice(0, 10);
+const dayStartMs = d => d * DAY + new Date().getTimezoneOffset() * MIN + 4 * HOUR;
+const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, ch => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[ch]));
+const fold = s => String(s || "").toLowerCase().normalize("NFKD").replace(/[̀-ͯ]/g, "");
+const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const plural = (n, w) => n + " " + w + (n === 1 ? "" : "s");
+const fmtTime = s => { s = Math.max(0, Math.round(s)); return Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0"); };
+const fmtDur = s => { s = Math.round(s); if (s < 60) return s + " s"; const m = Math.round(s / 60); if (m < 60) return m + " min"; const h = Math.floor(m / 60); return h + " h " + (m % 60) + " min"; };
+const fmtGap = m => m < 60 ? Math.max(1, Math.round(m)) + " min" : m < 1440 ? (Math.round(m / 6) / 10) + " h" : m < 1440 * 60 ? Math.round(m / 1440) + " days" : Math.round(m / 43200) + " mo";
+const fmtDate = d => new Date(d * DAY).toLocaleDateString("en-GB", {day: "numeric", month: "short", timeZone: "UTC"});
+function md(s, hl) {
+  let h = esc(s).replace(/`([^`]+)`/g, "<code>$1</code>").replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>").replace(/\n/g, "<br>");
+  for (const w of hl || []) { if (w.length < 2) continue; h = h.replace(new RegExp("(" + w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + ")(?![^<]*>)", "gi"), "<mark>$1</mark>"); }
+  return h;
+}
+
+// ================================================================ local storage
+const IDB = (() => {
+  let dbp = null;
+  const open = () => dbp || (dbp = new Promise((res, rej) => { const r = indexedDB.open("recall-neon", 1); r.onupgradeneeded = () => r.result.createObjectStore("kv"); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }));
+  const tx = async (mode, fn) => { const db = await open(); return new Promise((res, rej) => { const t = db.transaction("kv", mode); const r = fn(t.objectStore("kv")); t.oncomplete = () => res(r && r.result); t.onerror = () => rej(t.error); }); };
+  return {get: k => tx("readonly", s => s.get(k)).catch(() => undefined), set: (k, v) => tx("readwrite", s => s.put(v, k)).catch(() => {}), del: k => tx("readwrite", s => s.delete(k)).catch(() => {})};
+})();
+let dev = "w" + Math.random().toString(36).slice(2, 8);
+try { const d = localStorage.getItem("recall.dev"); if (d) dev = d; else localStorage.setItem("recall.dev", dev); } catch (e) {}
+
+// ================================================================ state
+const DEFAULT_SETTINGS = {goal: 25, newPerDay: 20, round: 10, retention: 0.9, preset: "smart", custom: [7, 30, 90, 1440, 86400], typeAnswer: false, planner: true, qstyle: "auto", font: 0, reverse: false, order: {}, mix: {}, status: {}, tests: {}, u: 0};
+const PRESETS = {
+  smart: {label: "Smart", hint: "1–3 come back in minutes; 4–5 are spaced by your memory model (FSRS)", m: [7, 30, 90, null, null]},
+  cram: {label: "Cram", hint: "everything comes back fast — a test is soon", m: [1, 5, 30, 240, 1440]},
+  longterm: {label: "Long-term", hint: "fewer reviews, longer gaps", m: [10, 60, 1440, 43200, 525600]},
+  custom: {label: "Custom", hint: "your own gaps", m: null},
+};
+const STATUS = {exam: "Exam soon", active: "Active", maintain: "Maintaining", paused: "Paused"};
+const blankState = () => ({session: null, user: null, cursor: "", progress: {}, meta: {settings: Object.assign({}, DEFAULT_SETTINGS), days: {}, edits: {}, custom: {}, bm: {}}, tests: [], dirty: [], metaDirty: false, testsDirty: []});
+let S = blankState();
+let DECK = null;
+const settings = () => S.meta.settings;
+let saveT = 0;
+function persist() { clearTimeout(saveT); saveT = setTimeout(() => IDB.set("state", S), 300); }
+
+// ================================================================ login relay + Neon Data API
+let JWT = null, JWT_EXP = 0;
+const jwtExp = t => { try { return JSON.parse(atob(t.split(".")[1].replace(/-/g, "+").replace(/_/g, "/"))).exp * 1000; } catch (e) { return 0; } };
+async function relay(path, body) {
+  const r = await fetch(RELAY + path, {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body)});
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) { const e = new Error(d.error || r.statusText); e.status = r.status; throw e; }
+  return d;
+}
+function takeLogin(d) { S.session = d.session; S.user = d.user; JWT = d.jwt; JWT_EXP = jwtExp(d.jwt); persist(); }
+async function token(force) {
+  if (!force && JWT && JWT_EXP - now() > 60000) return JWT;
+  if (!S.session) { const e = new Error("Signed out"); e.status = 401; throw e; }
+  const d = await relay("/token", {session: S.session});
+  takeLogin(d); return JWT;
+}
+async function rest(method, path, body, prefer, retried) {
+  const t = await token();
+  const h = {Authorization: "Bearer " + t, "Content-Type": "application/json"};
+  if (prefer) h.Prefer = prefer;
+  const r = await fetch(REST + path, {method, headers: h, body: body ? JSON.stringify(body) : undefined});
+  if (r.status === 401 && !retried) { JWT = null; return rest(method, path, body, prefer, true); }
+  const txt = await r.text(); let data = null; try { data = txt ? JSON.parse(txt) : null; } catch (e) { data = txt; }
+  if (!r.ok) { const e = new Error((data && data.message) || r.statusText); e.status = r.status; throw e; }
+  return data;
+}
+const UPSERT = "resolution=merge-duplicates,return=minimal";
+
+// ================================================================ sync
+let syncState = "offline", syncT = 0, syncing = false, lastSync = 0;
+const SYNC_TXT = {synced: "Synced", syncing: "Syncing…", error: "Sync failed — saved here", offline: "Offline — saved here"};
+function setSync(s) { syncState = s; document.querySelectorAll(".sync").forEach(el => { el.dataset.s = s; el.lastElementChild.textContent = SYNC_TXT[s]; }); }
+function markDirty(id) { if (!S.dirty.includes(id)) S.dirty.push(id); persist(); scheduleSync(); }
+function markMeta() { S.metaDirty = true; persist(); scheduleSync(); }
+function scheduleSync(ms) { clearTimeout(syncT); syncT = setTimeout(sync, ms == null ? 3000 : ms); }
+function mergeMeta(r) {
+  let localNewer = false; const m = S.meta;
+  if (r.settings && (r.settings.u || 0) > (m.settings.u || 0)) m.settings = Object.assign({}, DEFAULT_SETTINGS, r.settings); else if ((m.settings.u || 0) > ((r.settings && r.settings.u) || 0)) localNewer = true;
+  for (const day in r.days || {}) for (const d in r.days[day]) { const l = (m.days[day] || {})[d], x = r.days[day][d]; if (!l || x[0] > l[0]) (m.days[day] = m.days[day] || {})[d] = x; else if (l[0] > x[0]) localNewer = true; }
+  for (const day in m.days) for (const d in m.days[day]) if (!r.days || !r.days[day] || !r.days[day][d]) localNewer = true;
+  for (const part of ["edits", "custom", "bm"]) { const rem = r[part] || {}; m[part] = m[part] || {};
+    for (const k in rem) { const l = m[part][k]; if (!l || (rem[k].u || 0) > (l.u || 0)) m[part][k] = rem[k]; else if ((l.u || 0) > (rem[k].u || 0)) localNewer = true; }
+    for (const k in m[part]) if (!(k in rem)) localNewer = true; }
+  return localNewer;
+}
+async function loadDeck() {
+  const head = await rest("GET", "/content?select=version&id=eq.1");
+  if (!head.length) return false;
+  if (!DECK || DECK.version !== head[0].version) { const full = await rest("GET", "/content?select=data&id=eq.1"); DECK = full[0].data; await IDB.set("deck", DECK); indexDeck(); }
+  return true;
+}
+async function sync() {
+  if (!S.session || syncing) return;
+  if (navigator.onLine === false) return setSync("offline");
+  syncing = true; setSync("syncing");
+  try {
+    let ok = await loadDeck();
+    if (!ok) { await new Promise(r => setTimeout(r, 2000)); ok = await loadDeck(); }   // brand-new accounts need a moment
+    if (!ok && !DECK) { const e = new Error("not allowed"); e.status = 403; throw e; }
+    // pull progress changed since the cursor (server time)
+    let off = 0, maxU = S.cursor;
+    for (;;) {
+      const f = S.cursor ? "&updated_at=gte." + encodeURIComponent(S.cursor) : "";
+      const r = await rest("GET", `/progress?select=card,s,updated_at&order=updated_at.asc&limit=1000&offset=${off}${f}`);
+      for (const it of r) { const l = S.progress[it.card]; if (!l || (it.s.u || 0) > (l.u || 0)) { if (it.s.gone) delete S.progress[it.card]; else S.progress[it.card] = it.s; S.dirty = S.dirty.filter(x => x !== it.card); } if (it.updated_at > maxU) maxU = it.updated_at; }
+      if (r.length < 1000) break; off += 1000;
+    }
+    S.cursor = maxU;
+    // push local changes
+    const ids = S.dirty.slice();
+    for (let i = 0; i < ids.length; i += 500) {
+      const rows = ids.slice(i, i + 500).map(id => ({card: id, s: S.progress[id] || {gone: 1, u: now(), d: 8.64e15, c: 0}}));
+      await rest("POST", "/progress?on_conflict=user_id,card", rows, UPSERT);
+    }
+    S.dirty = S.dirty.filter(x => !ids.includes(x));
+    // meta
+    const mr = await rest("GET", "/meta?select=data");
+    const newer = mr.length ? mergeMeta(mr[0].data || {}) : true;
+    if (newer || S.metaDirty) await rest("POST", "/meta?on_conflict=user_id", [{data: S.meta}], UPSERT);
+    S.metaDirty = false;
+    // tests
+    const tr = await rest("GET", "/tests?select=data&order=created_at.desc&limit=300");
+    const have = new Set(S.tests.map(t => t.id)); tr.forEach(it => { if (!have.has(it.data.id)) S.tests.push(it.data); });
+    S.tests.sort((a, b) => a.ts - b.ts);
+    if (S.testsDirty.length) { const todo = S.tests.filter(t => S.testsDirty.includes(t.id)); await rest("POST", "/tests?on_conflict=user_id,id", todo.map(t => ({id: t.id, data: t})), UPSERT); S.testsDirty = []; }
+    indexDeck(); persist(); setSync("synced"); lastSync = now();
+    if (!busy()) render();
+  } catch (e) {
+    if (e.status === 401) { toast("Signed out — please sign in again"); S = blankState(); persist(); go({name: "login"}); }
+    else if (e.status === 403) { go({name: "login", err: "This account has no access to Recall. Sign in with one of the owner's accounts."}); }
+    setSync(navigator.onLine === false ? "offline" : "error");
+  } finally { syncing = false; }
+}
+document.addEventListener("visibilitychange", () => { if (document.hidden) { IDB.set("state", S); if (S.dirty.length || S.metaDirty || S.testsDirty.length) sync(); } else if (now() - lastSync > 60000) sync(); });
+window.addEventListener("online", () => scheduleSync(500));
+window.addEventListener("offline", () => setSync("offline"));
+
+// ================================================================ deck index
+let GROUPS = {}, TOPICS = {}, CARDS = [], BYID = {}, BYGROUP = {}, BYTOPIC = {};
+function indexDeck() {
+  if (!DECK) return;
+  GROUPS = {}; TOPICS = {};
+  DECK.groups.forEach(g => { GROUPS[g.id] = g; g.topics.forEach(t => TOPICS[t.id] = Object.assign({}, t, {g: g.id})); });
+  CARDS = []; BYID = {}; BYGROUP = {}; BYTOPIC = {};
+  const ed = S.meta.edits || {}, cu = S.meta.custom || {};
+  for (const c of DECK.cards) { const e = ed[c.id]; const card = e && (e.a != null || e.x != null) ? Object.assign({}, c, e.a != null ? {a: e.a} : {}, e.x != null ? {x: e.x} : {}, {edited: 1}) : c; CARDS.push(card); BYID[c.id] = card; }
+  for (const id in cu) { const c = cu[id]; if (c.del || !TOPICS[c.t]) continue; const card = Object.assign({id, src: "My cards (added in the app)", mine: 1}, c); CARDS.push(card); BYID[id] = card; }
+  for (const c of CARDS) { (BYGROUP[c.g] = BYGROUP[c.g] || []).push(c); (BYTOPIC[c.t] = BYTOPIC[c.t] || []).push(c); }
+  for (const g of DECK.groups) { g.topics.forEach(t => t.n = (BYTOPIC[t.id] || []).length); g.n = (BYGROUP[g.id] || []).length; }
+}
+const statusOf = g => settings().status[g] || (GROUPS[g] && GROUPS[g].status) || "active";
+const testsOf = g => settings().tests[g] || (GROUPS[g] ? GROUPS[g].tests : []);
+function topicCode(tid) {
+  const T = TOPICS[tid]; if (!T || !T.lec || !T.lec.length) return "";
+  if (T.g === "grk") { const a = T.lec[0], b = T.lec[T.lec.length - 1]; return a === b ? "L" + a : "L" + a + "–" + b; }
+  if (T.g === "bsi") return T.id === "bsi-lab" ? "LAB" : "B0" + T.lec[0];
+  if (T.g === "byt") return "Y0" + T.lec[0];
+  return "";
+}
+const noteUrl = tid => TOPICS[tid] && TOPICS[tid].note ? "obsidian://open?vault=" + encodeURIComponent(VAULT) + "&file=" + encodeURIComponent(TOPICS[tid].note) : null;
+
+// ================================================================ scheduler (same rules as the iPhone app)
+const W = [0.4872, 1.4003, 3.7145, 13.8206, 5.1618, 1.2298, 0.8975, 0.031, 1.6474, 0.1367, 1.0461, 2.1072, 0.0793, 0.3246, 1.587, 0.2272, 2.8755];
+const DECAY = -0.5, FACTOR = 19 / 81;
+const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+const Rof = (t, s) => Math.pow(1 + FACTOR * t / s, DECAY);
+const D0 = g => clamp(W[4] - (g - 3) * W[5], 1, 10);
+function nextTestDay(c) { let best = null; const d = today(); for (const t of testsOf(c.g)) if (t.date && t.topics.includes(c.t)) { const td = dayOf(t.date); if (td > d && (best === null || td < best)) best = td; } return best; }
+function newState(old, conf, t) {        // FSRS memory update (no gap)
+  const g = conf <= 2 ? 1 : conf - 1;
+  if (!old) return {s: W[g - 1] * (conf === 2 ? 1.5 : 1), f: D0(g), r: 1, l: g === 1 ? 1 : 0};
+  const st = {s: old.s, f: old.f, r: old.r, l: old.l};
+  const elapsed = (t - old.lt) / DAY;
+  if (elapsed >= 0.5) {
+    const r = Rof(elapsed, old.s);
+    if (g === 1) { st.s = Math.min(old.s, W[11] * Math.pow(old.f, -W[12]) * (Math.pow(old.s + 1, W[13]) - 1) * Math.exp(W[14] * (1 - r))) * (conf === 2 ? 1.5 : 1); st.l++; }
+    else st.s = old.s * (1 + Math.exp(W[8]) * (11 - old.f) * Math.pow(old.s, -W[9]) * (Math.exp(W[10] * (1 - r)) - 1) * (g === 2 ? W[15] : 1) * (g === 4 ? W[16] : 1));
+    st.f = clamp(W[7] * D0(4) + (1 - W[7]) * (old.f - W[6] * (g - 3)), 1, 10); st.r++;
+  } else if (g === 1 && old.c >= 3) { st.s = Math.min(old.s, W[0]); st.l++; }
+  return st;
+}
+function gapMinutes(conf, s, fuzz) {
+  const set = settings();
+  if (set.preset === "custom") return set.custom[conf - 1];
+  const m = (PRESETS[set.preset] || PRESETS.smart).m;
+  if (m[conf - 1] != null) return m[conf - 1];
+  let days = Math.max(1, Math.round(s / FACTOR * (Math.pow(set.retention, 1 / DECAY) - 1)));
+  if (fuzz && days > 2) days = Math.max(1, Math.round(days * (0.95 + Math.random() * 0.1)));
+  return Math.min(days, 365) * 1440;
+}
+function capForTest(c, gap, conf) {
+  if (!settings().planner || conf < 4) return gap;
+  const ex = nextTestDay(c); if (ex === null) return gap;
+  const until = (ex - today() - 1) * 1440;
+  return until >= 1440 && gap > until ? until : gap;
+}
+function previewGaps(c) { const t = now(), old = S.progress[c.id]; return [1, 2, 3, 4, 5].map(k => capForTest(c, gapMinutes(k, newState(old, k, t).s, false), k)); }
+function rateCard(id, conf, ms) {
+  const c = BYID[id], t = now(), old = S.progress[id];
+  const st = Object.assign({}, old || {}, newState(old, conf, t));
+  if (!old) st.n = today();
+  st.c = conf; st.lt = t; st.u = t;
+  st.d = t + capForTest(c, gapMinutes(conf, st.s, true), conf) * MIN;
+  st.s = +st.s.toFixed(3); st.f = +st.f.toFixed(3);
+  st.h = ((old && old.h) || []).concat([[Math.round(t / 1000), conf]]).slice(-10);
+  S.progress[id] = st;
+  logReview(conf >= 3, !old, ms);
+  markDirty(id);
+  return old;
+}
+function logReview(good, isNew, ms, sign) {
+  sign = sign || 1;
+  const k = isoOf(today()); const day = S.meta.days[k] = S.meta.days[k] || {};
+  const v = day[dev] = day[dev] || [0, 0, 0, 0];
+  v[0] = Math.max(0, v[0] + sign); if (good) v[1] = Math.max(0, v[1] + sign); if (isNew) v[3] = Math.max(0, v[3] + sign);
+  v[2] = Math.max(0, v[2] + sign * Math.min(ms || 0, 120000));
+  S.metaDirty = true;
+}
+const confOf = id => (S.progress[id] ? S.progress[id].c : 0);
+const recallOf = c => { const s = S.progress[c.id]; return s ? Rof(Math.max(0, (now() - s.lt) / DAY), s.s) : null; };
+function cramStart(c) {          // final 3 days before a dated test: every card of it comes back once
+  if (!settings().planner) return null;
+  const ex = nextTestDay(c); if (ex === null) return null;
+  const d = today(); return ex - d <= 3 ? dayStartMs(ex - 3) : null;
+}
+function isDue(c, t) { const s = S.progress[c.id]; if (!s) return false; if (s.d <= t) return true; const cs = cramStart(c); return cs !== null && s.lt < cs; }
+const mastery = cards => cards.length ? cards.reduce((a, c) => a + confOf(c.id), 0) / (5 * cards.length) : 0;
+function levels(cards) { const L = [0, 0, 0, 0, 0, 0]; for (const c of cards) L[confOf(c.id)]++; return L; }
+function counts(cards) { const t = now(); let over = 0, fresh = 0; for (const c of cards) { if (!S.progress[c.id]) fresh++; else if (isDue(c, t)) over++; } return {over, fresh, seen: cards.length - fresh, n: cards.length, m: mastery(cards), L: levels(cards)}; }
+function newToday(g) { const d = today(); let n = 0; for (const c of BYGROUP[g] || []) { const s = S.progress[c.id]; if (s && s.n === d) n++; } return n; }
+function avgSecPerCard() { let n = 0, ms = 0; for (const day of Object.values(S.meta.days)) for (const v of Object.values(day)) { n += v[0]; ms += v[2]; } return n > 20 ? ms / n / 1000 : 12; }
+function estLeft(cards) { let steps = 0; for (const c of cards) steps += (5 - confOf(c.id)) / 1.6; return steps * avgSecPerCard(); }
+// exam planner: how many new cards a subject needs per day to see every card of its next dated test 3 days early
+function nextTest(g) { const d = today(); let best = null; for (const t of testsOf(g)) if (t.date) { const td = dayOf(t.date); if (td >= d && (!best || td < best.day)) best = {t, day: td}; } return best; }
+function plannerNeed(g) {
+  const nt = nextTest(g); if (!nt || !settings().planner) return null;
+  const set = new Set(nt.t.topics), cards = (BYGROUP[g] || []).filter(c => set.has(c.t));
+  const unseen = cards.filter(c => !S.progress[c.id]).length, daysLeft = nt.day - today() - 3;
+  return {test: nt.t, day: nt.day, unseen, perDay: daysLeft > 0 ? Math.ceil(unseen / daysLeft) : unseen, daysLeft, cards};
+}
+function newLimit(g) {
+  const st = statusOf(g), base = settings().newPerDay;
+  if (st === "paused") return 0;
+  let lim = st === "maintain" ? Math.max(3, Math.round(base / 4)) : base;
+  const p = plannerNeed(g); if (p && st !== "maintain") lim = Math.min(150, Math.max(lim, p.perDay));
+  return lim;
+}
+const newLeft = g => Math.max(0, newLimit(g) - newToday(g));
+const cardsOfTopics = set => CARDS.filter(c => set.has(c.t));
+function cbar(L) { const n = L.reduce((a, b) => a + b, 0) || 1; return `<div class="cbar" role="img" aria-label="Confidence: ${L.slice(1).map((v, i) => (i + 1) + ": " + v).join(", ")}, not started: ${L[0]}">${[1, 2, 3, 4, 5].map(k => L[k] ? `<i style="width:${L[k] / n * 100}%;background:var(--c${k})"></i>` : "").join("")}</div>`; }
+function ring(L, size, pct, label) {
+  const n = L.reduce((a, b) => a + b, 0) || 1, r = size / 2 - 9, C = 2 * Math.PI * r; let off = 0, segs = "";
+  for (let k = 1; k <= 5; k++) { const frac = L[k] * k / (5 * n); if (!frac) continue; const len = frac * C; segs += `<circle cx="${size / 2}" cy="${size / 2}" r="${r}" fill="none" stroke="var(--c${k})" stroke-width="14" stroke-dasharray="${len} ${C - len}" stroke-dashoffset="${-off}" transform="rotate(-90 ${size / 2} ${size / 2})"/>`; off += len; }
+  return `<div class="ring" style="width:${size}px;height:${size}px"><svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" aria-hidden="true"><circle cx="${size / 2}" cy="${size / 2}" r="${r}" fill="none" stroke="var(--c0)" stroke-width="14"/>${segs}</svg><div class="lbl"><b>${pct}</b><span>${label}</span></div></div>`;
+}
+const recallChip = c => { const r = recallOf(c); if (r === null) return `<span class="pill">new</span>`; const col = r >= .85 ? "var(--ok)" : r >= .6 ? "var(--warn)" : "var(--bad)"; return `<span class="recall" style="color:${col}" title="Chance you'd remember it now">${Math.round(r * 100)}%</span>`; };
+
+// ================================================================ habit numbers
+function dayTotals(k) { const v = S.meta.days[isoOf(k)] || {}; let n = 0, g = 0, ms = 0; for (const x of Object.values(v)) { n += x[0]; g += x[1]; ms += x[2]; } return {n, g, ms}; }
+const counted = k => { const t = dayTotals(k); return t.n >= 20 || t.ms >= 5 * MIN; };
+function streak() {           // a day counts with 20 cards or 5 minutes; one free rest day per week
+  let d = today(), n = 0, lastRest = null;
+  if (!counted(d)) d--;
+  for (let guard = 0; guard < 2000; guard++) {
+    if (counted(d)) { n++; d--; continue; }
+    if (n > 0 && (lastRest === null || lastRest - d >= 7) && counted(d - 1)) { lastRest = d; d--; continue; }
+    break;
+  }
+  return n;
+}
+const minutesToday = () => dayTotals(today()).ms / MIN;
+
+// ================================================================ ui helpers
+const app = document.getElementById("app"), layer = document.getElementById("layer");
+let view = {name: "boot"}, sel = {}, session = null, quiz = null, tick = 0, undoBuf = null;
+const busy = () => ["study", "test", "check", "caught"].includes(view.name) || !!layer.innerHTML;
+function toast(msg) { document.querySelectorAll(".toast").forEach(t => t.remove()); const t = document.createElement("div"); t.className = "toast"; t.setAttribute("role", "status"); t.textContent = msg; document.body.appendChild(t); setTimeout(() => t.remove(), 2600); }
+const ICON = {
+  today: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11 12 4l9 7v9H3z"/><path d="M9 20v-6h6v6"/></svg>',
+  subjects: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="5" rx="1.5"/><rect x="3" y="11" width="18" height="5" rx="1.5"/><path d="M3 20h18"/></svg>',
+  search: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>',
+  progress: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>',
+  sliders: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/><circle cx="9" cy="6" r="2.2" fill="currentColor"/><circle cx="15" cy="12" r="2.2" fill="currentColor"/><circle cx="7" cy="18" r="2.2" fill="currentColor"/></svg>',
+  gear: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>'
+};
+const TABNAMES = {today: "Today", subjects: "Subjects", search: "Search", progress: "Progress"};
+function tabs(active) { return `<div class="tabs"><nav aria-label="Main">${Object.keys(TABNAMES).map(k => `<button data-act="tab" data-v="${k}" ${active === k ? 'aria-current="page"' : ""}>${ICON[k]}${TABNAMES[k]}</button>`).join("")}</nav></div>`; }
+function bandTop() { return `<div class="bandtop"><div class="brand"><img src="icon-192.png" alt="">Recall</div><div class="row" style="gap:4px"><button class="sync" data-act="syncNow" data-s="${syncState}" aria-label="Sync status — tap to sync now"><i></i><span>${SYNC_TXT[syncState]}</span></button><button class="icon-btn" data-act="tab" data-v="settings" aria-label="Settings">${ICON.gear}</button></div></div>`; }
+function go(v) { view = v; if (v.name !== "test") clearInterval(tick); render(); window.scrollTo(0, 0); }
+function render() {
+  document.documentElement.style.setProperty("--fs", String(1 + 0.12 * (settings().font || 0)));
+  const f = {boot: () => "", login: vLogin, today: vToday, subjects: vSubjects, group: vGroup, topic: vTopic, study: vStudy, check: vCheck, caught: vCaught, test: vTest, result: vResult, search: vSearch, progress: vProgress, settings: vSettings}[view.name] || vToday;
+  app.innerHTML = f();
+  app.classList.toggle("withtabs", !!app.querySelector(".tabs"));
+  if (view.name === "search" && view.focus) { const i = document.getElementById("q"); if (i) { i.focus(); i.setSelectionRange(i.value.length, i.value.length); } }
+  if (view.name === "study") { const i = document.getElementById("cmdIn"); if (i && !session.revealed) i.focus(); }
+}
+function openSheet(h) { layer.innerHTML = `<div class="scrim" data-act="closeSheet"><div class="sheet" role="dialog" aria-modal="true">${h}</div></div>`; }
+function closeSheet() { layer.innerHTML = ""; }
+
+// ================================================================ login
+function vLogin() {
+  const signup = view.mode === "signup";
+  return `<div class="login"><img class="logo" src="icon-512.png" alt=""><div><h1>${signup ? "Create your account" : "Sign in to Recall"}</h1><p class="muted">Your cards, progress and test scores sync between this website and the iPhone app.</p></div>
+  <form class="stack" id="loginForm"><div class="field"><label for="le">Email</label><input id="le" type="email" autocomplete="email" required value="${esc(view.email || "")}"></div>
+  <div class="field"><label for="lp">Password</label><input id="lp" type="password" autocomplete="${signup ? "new-password" : "current-password"}" minlength="8" required></div>
+  ${view.err ? `<div class="err" role="alert">${esc(view.err)}</div>` : ""}
+  <button class="btn primary block" type="submit">${signup ? "Create account" : "Sign in"}</button></form>
+  <button class="btn ghost" data-act="loginMode">${signup ? "I already have an account" : "First time here? Create an account"}</button>
+  <p class="small muted">A private app: only the owner's accounts can open the cards.</p></div>`;
+}
+
+// ================================================================ Today
+function greeting() { const h = new Date().getHours(); return h < 5 ? "Good night" : h < 12 ? "Good morning" : h < 18 ? "Hi" : "Good evening"; }
+function activeGroups() { return DECK.titles.flatMap(T => T.groups).filter(g => GROUPS[g] && statusOf(g) !== "paused"); }
+function planRows() {
+  return activeGroups().map(g => { const cs = BYGROUP[g] || [], c = counts(cs), nw = Math.min(c.fresh, newLeft(g)); return {g, over: c.over, nw, L: c.L, mins: Math.max(1, Math.round((c.over + nw * 1.6) * avgSecPerCard() / 60))}; }).filter(r => r.over || r.nw);
+}
+function nearestTest() { let best = null; for (const g of Object.keys(GROUPS)) { if (statusOf(g) === "paused") continue; const p = plannerNeed(g); if (p && (!best || p.day < best.day)) best = Object.assign({g}, p); } return best; }
+function readiness(cards) { return mastery(cards); }
+function vToday() {
+  const all = counts(CARDS.filter(c => statusOf(c.g) !== "paused")), mins = minutesToday(), goal = settings().goal;
+  const name = (S.user && (S.user.name || S.user.email.split("@")[0]) || "").split(/[ ._]/)[0];
+  const rows = planRows(), total = rows.reduce((a, r) => a + r.mins, 0);
+  let h = `<header class="band"><div class="col">${bandTop()}<div class="hello">${greeting()}, ${esc(name ? name[0].toUpperCase() + name.slice(1) : "")}!</div>
+  <div class="kpis"><div class="kpi"><span>Day streak</span><b>${streak()}</b></div><div class="kpi"><span>Today</span><b>${Math.round(mins)}<small style="font-size:.9rem;color:var(--band-muted)"> / ${goal} min</small></b></div><div class="kpi"><span>Overdue</span><b>${all.over}</b></div></div>
+  <div class="goal" style="margin-top:10px" aria-label="Daily goal progress"><div class="gbar"><i style="width:${Math.min(100, mins / goal * 100)}%"></i></div><span class="small" style="color:var(--band-muted)">${mins >= goal ? "Goal done ✓" : Math.max(1, Math.round(goal - mins)) + " min to go"}</span></div>
+  <div class="studybar"><button class="icon-btn" data-act="mixSheet" aria-label="Adjust the study mix">${ICON.sliders}</button><button class="btn primary" data-act="studyPlan" ${rows.length ? "" : "disabled"}>${rows.length ? "Start · " + total + " min plan ▸" : "All caught up"}</button></div></div></header><main class="col">`;
+  const nt = nearestTest();
+  if (nt) {
+    const ready = readiness(nt.cards), lim = newLimit(nt.g), onTrack = nt.unseen === 0 || (nt.daysLeft > 0 && nt.perDay <= lim);
+    h += `<div class="section"><div class="eyebrow">${statusOf(nt.g) === "exam" ? "Exam soon" : "Next test"}</div><button class="testcard" data-act="group" data-g="${nt.g}" style="text-align:left;width:100%"><div class="days"><b class="num">${nt.day - today()}</b><span>${nt.day - today() === 1 ? "day" : "days"}</span></div><div class="grow"><h3>${esc(GROUPS[nt.g].title)} ${esc(nt.test.title)} · ${fmtDate(nt.day)}</h3><div class="small muted">${Math.round(ready * 100)}% ready · ${nt.unseen ? nt.unseen + " cards not seen yet · " + nt.perDay + " new/day needed" : "every card seen"}</div><div class="cbar" style="margin-top:6px"><i style="width:${ready * 100}%;background:var(--accent)"></i></div></div><span class="pill ${onTrack ? "ok" : "warn"}">${onTrack ? "On track" : "Behind"}</span></button></div>`;
+  }
+  h += `<div class="section"><div class="eyebrow">Today's plan</div>`;
+  h += rows.length ? rows.map(r => `<button class="plan" data-act="studyGroup" data-g="${r.g}"><span class="code">${esc(GROUPS[r.g].title)}</span><span class="stack" style="gap:5px;min-width:0"><span><b>${r.over ? r.over + " overdue" : ""}${r.over && r.nw ? " · " : ""}${r.nw ? r.nw + " new" : ""}</b> <span class="pill ${statusOf(r.g)}" style="margin-left:4px">${STATUS[statusOf(r.g)]}</span></span>${cbar(r.L)}</span><span class="right"><b>${r.mins}</b><br><span class="muted">min</span></span></button>`).join("") : `<div class="panel"><b>Nothing due right now.</b> <span class="muted">Overdue cards and today's new cards are done. Try a quick test or a drill from a subject.</span></div>`;
+  h += `</div><div class="section"><div class="eyebrow">Last 12 weeks</div><div class="panel"><div class="heat" aria-label="Study minutes per day">${heatCells()}</div><div class="row small muted" style="margin-top:8px;justify-content:space-between"><span>${fmtDate(today() - 83)}</span><span>Darker = more minutes</span><span>Today</span></div></div></div>`;
+  return h + `</main>` + tabs("today");
+}
+function heatCells() {
+  const d0 = today() - 83, out = [];
+  for (let k = 0; k < 84; k++) { const t = dayTotals(d0 + k), m = t.ms / MIN; const lv = m === 0 ? 0 : m < 5 ? 1 : m < 15 ? 2 : m < 30 ? 3 : 4; out.push(`<i title="${isoOf(d0 + k)}: ${Math.round(m)} min, ${t.n} cards" style="background:${lv ? `color-mix(in srgb,var(--accent) ${lv * 25}%,var(--soft))` : "var(--soft)"}"></i>`); }
+  return out.join("");
+}
+
+// ================================================================ Subjects
+function vSubjects() {
+  let h = `<header class="band"><div class="col">${bandTop()}<div class="hello">Subjects</div></div></header><main class="col">`;
+  for (const T of DECK.titles) {
+    h += `<div class="section"><div class="eyebrow">${esc(T.title)}</div>`;
+    for (const gid of T.groups) { const g = GROUPS[gid]; if (!g) continue; const c = counts(BYGROUP[gid] || []);
+      h += `<button class="subj" data-act="group" data-g="${gid}"><span class="code">${esc(g.title)}</span><span class="stack" style="gap:5px;min-width:0"><span><b>${esc(g.name)}</b> <span class="pill ${statusOf(gid)}">${STATUS[statusOf(gid)]}</span></span><span class="small muted num">${c.seen} / ${g.n} cards</span>${cbar(c.L)}</span><span class="right"><b>${(c.m * 100).toFixed(1)}%</b><br>${c.over ? `<span style="color:var(--c1);font-weight:700">${c.over} overdue</span>` : `<span class="muted">mastery</span>`}</span></button>`; }
+    h += `</div>`;
+  }
+  const bm = bookmarked();
+  h += `<div class="section"><div class="eyebrow">Bookmarks</div>${bm.length ? `<button class="btn block" data-act="studyBm">★ Study ${plural(bm.length, "bookmarked card")}</button>` : `<p class="muted small">Tap ☆ on a card while studying to bookmark it.</p>`}</div>`;
+  return h + `</main>` + tabs("subjects");
+}
+const bookmarked = () => CARDS.filter(c => S.meta.bm[c.id] && S.meta.bm[c.id].v);
+
+// ================================================================ Subject screen
+function selected(gid) { if (!sel[gid]) sel[gid] = new Set(GROUPS[gid].topics.filter(t => t.id !== "grk-info").map(t => t.id)); return sel[gid]; }
+function vGroup() {
+  const g = GROUPS[view.g], set = selected(g.id), cs = BYGROUP[g.id] || [], gc = counts(cs), tab = view.tab || "topics";
+  const p = plannerNeed(g.id), readyLbl = p ? "Ready for " + p.test.title : "Est. time left", readyVal = p ? Math.round(mastery(p.cards) * 100) + "%" : fmtDur(estLeft(cs));
+  let h = `<header class="band"><div class="col"><button class="back" data-act="tab" data-v="subjects">‹ Subjects</button>
+  <div class="row" style="margin-top:6px;gap:14px"><span class="code" style="background:var(--band-soft)">${esc(g.title)}</span><div class="grow"><h1 style="font-size:1.4rem">${esc(g.name)}</h1><div class="small" style="color:var(--band-muted)">${g.n} cards · ${g.topics.length} topics · <button class="back" style="min-height:0;color:#fff;text-decoration:underline" data-act="statusSheet" data-g="${g.id}">${STATUS[statusOf(g.id)]}</button></div></div></div>
+  <div class="kpis"><div class="kpi"><span>Mastery</span><b>${(gc.m * 100).toFixed(1)}%</b></div><div class="kpi"><span>${esc(readyLbl)}</span><b>${readyVal}</b></div><div class="kpi"><span>Overdue</span><b>${gc.over}</b></div></div>
+  <div class="studybar"><button class="btn primary" data-act="study" data-g="${g.id}" ${set.size ? "" : "disabled"}>Study ${set.size === g.topics.length ? "(all)" : "(" + set.size + ")"} ▸</button><button class="btn" style="background:var(--band-soft);color:#fff;border-color:transparent" data-act="drillSheet" data-g="${g.id}" ${set.size ? "" : "disabled"}>⚡ Drill</button></div></div></header><main class="col">
+  <div class="subtabs" role="tablist">${[["topics", "Topics"], ["tests", "Tests"], ["cards", "Cards"]].map(([k, l]) => `<button role="tab" data-act="gtab" data-v="${k}" aria-pressed="${tab === k}">${l}</button>`).join("")}</div>`;
+  if (tab === "topics") {
+    const order = settings().order[g.id] || "random", sc = counts(cardsOfTopics(set));
+    h += `<div class="section"><div class="row between"><label class="row" style="gap:8px;font-weight:700"><input type="checkbox" class="check" data-act="selToggleAll" data-g="${g.id}" ${set.size === g.topics.length ? "checked" : ""}> All</label>
+    <div class="seg" role="group" aria-label="Order of new cards"><button data-act="order" data-g="${g.id}" data-v="progressive" aria-pressed="${order === "progressive"}">Progressive</button><button data-act="order" data-g="${g.id}" data-v="random" aria-pressed="${order === "random"}">Random</button></div></div>
+    <div class="panel" style="padding:4px 14px">${g.topics.map(t => { const c = counts(BYTOPIC[t.id] || []), code = topicCode(t.id); return `<div class="topic"><input type="checkbox" class="check" id="tp-${t.id}" data-act="toggleTopic" data-g="${g.id}" data-t="${t.id}" ${set.has(t.id) ? "checked" : ""}><label for="tp-${t.id}"><span>${code ? `<span class="chip">${code}</span> ` : ""}<b>${esc(t.title)}</b></span><span class="row small muted num" style="gap:8px"><span>${c.seen}/${t.n} studied</span>${c.over ? `<span class="pill over">${c.over} overdue</span>` : ""}<span>${(c.m * 100).toFixed(0)}%</span></span>${cbar(c.L)}</label><button class="tbtn" data-act="topic" data-t="${t.id}" aria-label="Cards in ${esc(t.title)}">›</button></div>`; }).join("")}</div>
+    <p class="small muted">Selected: ${sc.n} cards · ${sc.over} overdue · ${Math.min(sc.fresh, newLeft(g.id))} new allowed today${p && p.unseen ? ` (planner: ${p.perDay}/day to see all of ${esc(p.test.title)} by ${fmtDate(p.day - 3)})` : ""}. Overdue cards come first. <b>Progressive</b> takes new cards topic by topic; <b>Random</b> mixes them.</p>
+    <button class="btn ghost block" data-act="addCard" data-g="${g.id}">+ Add a card</button></div>`;
+  } else if (tab === "tests") {
+    const d = today(), hist = S.tests.filter(t => t.g === g.id);
+    h += `<div class="section">${testsOf(g.id).map(t => { const days = t.date ? dayOf(t.date) - d : null; const mine = hist.filter(x => x.title === t.title); const best = mine.length ? Math.max(...mine.map(x => x.right / x.n)) : null; const last = mine.length ? mine[mine.length - 1] : null;
+      return `<div class="testcard"><div class="days"${days === null || days < 0 ? ' style="background:var(--soft);color:var(--muted)"' : ""}><b class="num">${days === null ? "—" : days < 0 ? "✓" : days}</b><span>${days === null ? "no date" : days < 0 ? "past" : days === 1 ? "day" : "days"}</span></div><div class="grow"><h3>${esc(t.title)}</h3><div class="small muted">${esc(t.note || "")} · ${t.n} q · ${t.min} min · ${t.kind === "exam" ? "results at the end" : "feedback each answer"}${last ? ` · last ${Math.round(last.right / last.n * 100)}%, best ${Math.round(best * 100)}%` : ""}</div></div><button class="btn sm" data-act="startTest" data-g="${g.id}" data-t="${t.id}">Start</button></div>`; }).join("")}
+    <button class="btn block" data-act="customTest" data-g="${g.id}" ${set.size ? "" : "disabled"}>Custom test from the ticked topics</button><button class="btn ghost block" data-act="testsEditor" data-g="${g.id}">Edit tests & dates</button></div>`;
+  } else {
+    h += `<div class="section"><button class="btn block" data-act="tab" data-v="search" data-gf="${g.id}">Search ${esc(g.title)} cards</button><div class="stack" style="gap:8px">${listCards(cs.slice(0, 60), [])}</div>${cs.length > 60 ? `<p class="small muted">Showing 60 of ${cs.length}. Open a topic or use Search for the rest.</p>` : ""}</div>`;
+  }
+  return h + `</main>` + tabs("subjects");
+}
+function vTopic() {
+  const t = TOPICS[view.t], cards = BYTOPIC[view.t] || [], nu = noteUrl(view.t);
+  return `<header class="band"><div class="col"><button class="back" data-act="group" data-g="${t.g}">‹ ${esc(GROUPS[t.g].name)}</button><h1 style="font-size:1.4rem;margin-top:6px">${esc(t.title)}</h1><div class="studybar"><button class="btn primary" data-act="studyTopic" data-t="${t.id}">Study this topic ▸</button>${nu ? `<a class="btn" style="background:var(--band-soft);color:#fff;border-color:transparent" href="${nu}">Open note</a>` : ""}</div></div></header><main class="col"><p class="small muted">${cards.length} cards · the coloured edge shows your last rating.</p><div class="stack" style="gap:8px">${listCards(cards, [])}</div></main>` + tabs("subjects");
+}
+
+// ================================================================ study sessions
+function interleave(cards) { const by = {}; cards.forEach(c => (by[c.t] = by[c.t] || []).push(c)); const lists = shuffle(Object.values(by)); const out = []; let i = 0; while (lists.some(l => l.length)) { const l = lists[i % lists.length]; if (l.length) out.push(l.shift()); i++; } return out; }
+const mixWeight = g => { const m = settings().mix[g]; const base = m == null ? 100 : m; return base * ({exam: 2, active: 1, maintain: 0.5, paused: 0}[statusOf(g)] || 1); };
+function weightedMix(byGroup) {
+  const keys = Object.keys(byGroup).filter(k => byGroup[k].length && mixWeight(k) > 0); const credit = {}; keys.forEach(k => credit[k] = 0); const out = [];
+  while (keys.some(k => byGroup[k].length)) { let best = null; let total = 0; for (const k of keys) if (byGroup[k].length) { credit[k] += mixWeight(k); total += mixWeight(k); if (!best || credit[k] > credit[best]) best = k; } credit[best] -= total; out.push(byGroup[best].shift()); }
+  return out;
+}
+function buildQueue(cards, mode) {
+  const t = now();
+  if (mode === "drill" || mode === "list") return cards.slice();
+  const overByG = {}; cards.filter(c => isDue(c, t)).sort((a, b) => S.progress[a.id].d - S.progress[b.id].d).forEach(c => (overByG[c.g] = overByG[c.g] || []).push(c));
+  const freshByG = {};
+  cards.filter(c => !S.progress[c.id]).forEach(c => (freshByG[c.g] = freshByG[c.g] || []).push(c));
+  for (const g in freshByG) { const ord = settings().order[g] || "random"; freshByG[g] = (ord === "progressive" ? freshByG[g] : interleave(freshByG[g])).slice(0, newLeft(g)); }
+  const over = Object.keys(overByG).length > 1 ? weightedMix(overByG) : (Object.values(overByG)[0] || []);
+  const fresh = Object.keys(freshByG).length > 1 ? weightedMix(freshByG) : (Object.values(freshByG)[0] || []);
+  const q = []; let i = 0, j = 0;
+  while (i < over.length || j < fresh.length) { for (let k = 0; k < 3 && i < over.length; k++) q.push(over[i++]); if (j < fresh.length) q.push(fresh[j++]); }
+  return q;
+}
+function startStudy(cards, mode, label, scope) {
+  const q = buildQueue(cards, mode);
+  const back = view.name === "caught" || view.name === "check" ? (session && session.back) : view;
+  session = {q: q.map(c => c.id), pos: 0, label, mode, revealed: false, rated: 0, dist: [0, 0, 0, 0, 0, 0], startM: mastery(scope || cards), scope: (scope || cards).map(c => c.id), t0: now(), shownAt: now(), tfPick: null, typed: "", cmdTry: null, back};
+  undoBuf = null;
+  go({name: q.length ? "study" : "caught"});
+}
+const curCard = () => session && BYID[session.q[session.pos]];
+// command check: placeholders like HOST, PORT, <name> accept anything; everything else must match token by token
+function cmdTokens(s) { return String(s).trim().replace(/\s+/g, " ").split(" "); }
+function cmdCompare(expected, typed) {
+  const e = cmdTokens(expected), t = cmdTokens(typed), out = []; let ok = e.length === t.length;
+  const wild = tok => /^<[^>]+>$/.test(tok) || /^[A-Z][A-Z0-9_]{2,}$/.test(tok) || /^(HOST|PORT|PID)/.test(tok);
+  for (let i = 0; i < Math.max(e.length, t.length); i++) {
+    const a = e[i], b = t[i];
+    if (a === undefined) { ok = false; out.push(`<span class="bad">${esc(b)}</span>`); continue; }
+    if (b === undefined) { ok = false; out.push(`<span class="miss">${esc(a)}</span>`); continue; }
+    if (a === b || wild(a) || (/HOST|PORT/.test(a) && a.replace(/HOST|PORT|PID/g, "") === b.replace(/[0-9.a-z]+/g, ""))) out.push(esc(b));
+    else { ok = false; out.push(`<span class="bad">${esc(b)}</span>`); }
+  }
+  return {ok, html: out.join(" ")};
+}
+function vStudy() {
+  const c = curCard(); if (!c) return vCheck();
+  const t = TOPICS[c.t], g = GROUPS[c.g], set = settings();
+  const progress = session.mode === "drill" ? session.pos / session.q.length : (session.rated % set.round) / set.round;
+  const isCmd = !!c.cmd, rev = set.reverse && c.tf == null && !isCmd;
+  const front = rev ? c.a : c.q, back = rev ? c.q : c.a;
+  const bm = S.meta.bm[c.id] && S.meta.bm[c.id].v, nu = noteUrl(c.t);
+  let extra = "";
+  if (session.revealed) {
+    if (c.tf != null && session.tfPick != null) extra += `<div class="verdict ${session.tfPick === c.tf ? "ok" : "no"}">${session.tfPick === c.tf ? "✓ Correct" : "✗ Not quite"} — it's ${c.tf ? "TRUE" : "FALSE"}</div>`;
+    if (isCmd && session.cmdTry) extra += `<div class="verdict ${session.cmdTry.ok ? "ok" : "no"}">${session.cmdTry.ok ? "✓ Exact command" : "✗ Not the exact command"}</div><div class="xpl"><span class="eyebrow">You typed</span><div class="diff">${session.cmdTry.html || "<i>nothing</i>"}</div><span class="eyebrow" style="margin-top:8px">Expected</span><div class="diff">${esc(c.cmd)}</div></div>`;
+    if (session.typed && !isCmd) extra += `<div class="xpl"><span class="eyebrow">Your answer</span>${md(session.typed)}</div>`;
+    extra += c.x ? `<div class="xpl"><span class="eyebrow">Why</span>${md(c.x)}</div>` : `<button class="tbtn small" data-act="edit" data-id="${c.id}" style="padding-left:0">+ Add an explanation</button>`;
+    if (nu) extra += `<a class="note" href="${nu}">📓 Open <b>${esc(t.note.split("/").pop().replace(/-/g, " "))}</b> in Obsidian</a>`;
+  }
+  const gaps = session.revealed ? previewGaps(c) : null;
+  let dock;
+  if (session.revealed) dock = `<div class="ask">How well did you know this?</div><div class="rate">${[1, 2, 3, 4, 5].map(n => `<div><button class="r${n}" data-act="rate" data-n="${n}" aria-label="${n} — ${["", "not at all", "barely", "partly", "mostly", "perfectly"][n]}, next in ${fmtGap(gaps[n - 1])}">${n}</button><small>${fmtGap(gaps[n - 1])}</small></div>`).join("")}</div><div class="ratelbl"><span>Not at all</span><span>Perfectly</span></div>`;
+  else if (c.tf != null) dock = `<div class="tf"><button class="btn" data-act="tf" data-v="1">True</button><button class="btn" data-act="tf" data-v="0">False</button></div>`;
+  else if (isCmd) dock = `<div class="row" style="gap:8px"><button class="btn grow" data-act="reveal">Show</button><button class="btn primary grow" data-act="cmdCheck" style="min-height:56px">Check command</button></div>`;
+  else dock = `<button class="btn primary block" data-act="reveal" style="min-height:56px">Show answer</button>`;
+  return `<div class="study"><div class="shead"><button class="icon-btn" data-act="endStudy" aria-label="End session">✕</button><div class="prog" aria-label="Round progress"><i style="width:${progress * 100}%"></i></div><span class="small muted num">${session.mode === "drill" ? (session.pos + 1) + "/" + session.q.length : (session.q.length - session.pos) + " left"}</span>${undoBuf ? `<button class="icon-btn" data-act="undo" aria-label="Undo last rating">↶</button>` : ""}<button class="icon-btn" data-act="studyMenu" aria-label="Study settings">${ICON.gear}</button></div>
+  <div class="face"><div class="meta"><span class="chip">${esc(g.title)}</span>${topicCode(c.t) ? `<span class="chip">${topicCode(c.t)}</span>` : ""}<span class="grow" style="min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(t.title)}</span>${isCmd ? `<span class="pill">type it</span>` : ""}${recallChip(c)}<button class="star" data-act="bm" data-id="${c.id}" aria-pressed="${!!bm}" aria-label="Bookmark">${bm ? "★" : "☆"}</button><button class="star" data-act="edit" data-id="${c.id}" aria-label="Edit card">✎</button></div>
+  <div class="q">${rev ? `<span class="eyebrow" style="display:block;margin-bottom:6px">Answer → question</span>` : ""}${md(front)}</div>
+  ${session.revealed ? `<div class="a">${md(back)}</div>` : `<div class="a hidden" ${c.tf == null && !isCmd ? 'data-act="reveal"' : ""}>${c.tf != null ? "True or false?" : isCmd ? "Type the exact command below" : "Answer it in your head, then tap to reveal"}</div>`}</div>
+  ${!session.revealed && isCmd ? `<input class="cmdbox" id="cmdIn" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="$ type the command" value="${esc(session.typed)}" aria-label="Type the command">` : ""}
+  ${!session.revealed && set.typeAnswer && c.tf == null && !isCmd ? `<textarea class="answerbox" id="typed" placeholder="Type your answer (optional)">${esc(session.typed)}</textarea>` : ""}
+  ${extra}
+  <div class="dock">${dock}</div></div>`;
+}
+function reveal() { const tx = document.getElementById("typed") || document.getElementById("cmdIn"); if (tx) session.typed = tx.value.trim(); session.revealed = true; render(); }
+function cmdCheck() { const c = curCard(), i = document.getElementById("cmdIn"); session.typed = i ? i.value.trim() : ""; session.cmdTry = cmdCompare(c.cmd, session.typed); session.revealed = true; render(); }
+function rate(n) {
+  const c = curCard(), ms = now() - session.shownAt;
+  const prev = S.progress[c.id] ? JSON.parse(JSON.stringify(S.progress[c.id])) : null;
+  undoBuf = {id: c.id, prev, q: session.q.slice(), pos: session.pos, rated: session.rated, dist: session.dist.slice(), good: n >= 3, isNew: !prev, ms};
+  rateCard(c.id, n, ms); session.dist[n]++; session.rated++;
+  if (session.mode !== "drill" && n <= 3) { const gap = {1: 3, 2: 6, 3: 12}[n]; const at = session.pos + 1 + gap; if (at <= session.q.length) session.q.splice(at, 0, c.id); else if (n <= 2) session.q.push(c.id); }
+  session.pos++; session.revealed = false; session.tfPick = null; session.typed = ""; session.cmdTry = null; session.shownAt = now();
+  if (navigator.vibrate) navigator.vibrate(8);
+  if (session.pos >= session.q.length) return go({name: "check", done: true});
+  if (session.mode !== "drill" && session.rated % settings().round === 0) return go({name: "check"});
+  render(); window.scrollTo(0, 0);
+}
+function undo() {
+  if (!undoBuf) return; const u = undoBuf; undoBuf = null;
+  if (u.prev) { S.progress[u.id] = Object.assign({}, u.prev, {u: now()}); markDirty(u.id); }
+  else { delete S.progress[u.id]; markDirty(u.id); }
+  logReview(u.good, u.isNew, u.ms, -1);
+  Object.assign(session, {q: u.q, pos: u.pos, rated: u.rated, dist: u.dist, revealed: true, shownAt: now()});
+  persist(); go({name: "study"}); toast("Rating undone");
+}
+function readyBy(scopeCards) {
+  const byG = {}; scopeCards.forEach(c => { if (!S.progress[c.id]) byG[c.g] = (byG[c.g] || 0) + 1; });
+  let days = 0; for (const g in byG) { const lim = Math.max(1, newLimit(g)); days = Math.max(days, Math.ceil(byG[g] / lim)); }
+  return today() + days;
+}
+function vCheck() {
+  if (!session) return vToday();
+  const scope = session.scope.map(id => BYID[id]).filter(Boolean), L = levels(scope), m = mastery(scope);
+  const done = view.done || session.pos >= session.q.length, secs = (now() - session.t0) / 1000, c = counts(scope), gain = m - session.startM;
+  const title = session.mode === "drill" ? (done ? "Drill complete!" : "Drill") : done ? "Session complete" : "Checkpoint!";
+  const groupsIn = [...new Set(scope.map(x => x.g))], p = groupsIn.length === 1 ? plannerNeed(groupsIn[0]) : null, rb = readyBy(scope);
+  const weak = session.mode === "drill" && done ? session.q.filter((id, i, a) => a.indexOf(id) === i && confOf(id) > 0 && confOf(id) <= 2) : [];
+  return `<div class="col" style="padding-block:calc(env(safe-area-inset-top,0px) + 24px) 40px"><div class="stack" style="align-items:center;text-align:center"><h1>${title}</h1><div class="muted small">${esc(session.label)} · ${plural(scope.length, "card")} in mix</div>${ring(L, 210, (m * 100).toFixed(1) + "%", "Mastery")}</div>
+  <div style="margin-top:16px">${session.mode === "drill" ? `<div class="statrow"><span>Change in mastery</span><b>${gain >= 0 ? "+" : ""}${(gain * 100).toFixed(1)}%</b></div><div class="statrow"><span>Time spent</span><b>${fmtDur(secs)}</b></div>${weak.length ? `<div class="statrow"><span>Rated 1–2</span><b>${weak.length}</b></div>` : ""}`
+    : `<div class="statrow"><span>This session</span><b>${gain >= 0 ? "+" : ""}${(gain * 100).toFixed(1)}% · ${plural(session.rated, "card")} · ${fmtDur(secs)}</b></div><div class="statrow"><span>Overdue</span><b>${c.over}</b></div><div class="statrow"><span>New cards left</span><b>${c.fresh}</b></div><div class="statrow"><span>${p ? "Every " + esc(p.test.title) + " card seen by" : "Every card seen by"}</span><b>${c.fresh ? fmtDate(rb) + (p ? (rb <= p.day - 3 ? " ✓" : " ⚠️") : "") : "done ✓"}</b></div>`}</div>
+  <div class="stack" style="margin-top:18px"><div class="row" style="gap:10px"><button class="btn grow" data-act="endStudy">Done</button>${done ? "" : `<button class="btn primary grow" data-act="continue">${settings().round} more cards</button>`}</div>${weak.length ? `<button class="btn block" data-act="studyWeak">Study the ${weak.length} cards rated 1–2</button>` : ""}</div></div>`;
+}
+function vCaught() {
+  const scope = (session ? session.scope : []).map(id => BYID[id]).filter(Boolean), m = mastery(scope), c = counts(scope);
+  return `<div class="col" style="padding-block:calc(env(safe-area-inset-top,0px) + 30px) 40px"><div class="stack" style="align-items:center;text-align:center"><h1>You're caught up!</h1><p class="muted">${c.fresh ? "Nothing is overdue and today's new cards are done." : "You've seen every card here and nothing is overdue."}</p>${ring(levels(scope), 190, (m * 100).toFixed(1) + "%", "Mastery")}</div>
+  <div style="margin-top:16px"><div class="statrow"><span>New cards left</span><b>${c.fresh}</b></div><div class="statrow"><span>Next card due</span><b>${nextDueText(scope)}</b></div></div>
+  <div class="stack" style="margin-top:18px"><button class="btn primary block" data-act="anyway">Study ${settings().round} cards anyway</button><button class="btn block" data-act="endStudy">Take a break</button></div></div>`;
+}
+function nextDueText(scope) { let best = Infinity; for (const c of scope) { const s = S.progress[c.id]; if (s && s.d < best) best = s.d; } if (best === Infinity) return "—"; const mins = (best - now()) / MIN; return mins <= 0 ? "now" : "in " + fmtGap(mins); }
+
+// ================================================================ tests & exams
+function buildQuiz(g, title, kind, topics, n, min, pts) {
+  const pool = CARDS.filter(c => topics.includes(c.t)); if (!pool.length) return toast("No cards in these topics");
+  const by = {}; pool.forEach(c => (by[c.t] = by[c.t] || []).push(c)); Object.values(by).forEach(shuffle);
+  const pick = [], keys = shuffle(Object.keys(by)); n = Math.min(n, pool.length);
+  while (pick.length < n) for (const k of keys) { if (pick.length >= n) break; if (by[k].length && (keys.length === 1 || Math.random() < by[k].length / pool.length * keys.length)) pick.push(by[k].shift()); }
+  shuffle(pick);
+  const qs = pick.map(c => {
+    if (c.tf != null) return {id: c.id, type: "tf"};
+    if (c.cmd) return {id: c.id, type: "cmd"};
+    if (settings().qstyle !== "self" && c.a.length <= 220) {
+      // wrong options of a similar length, so the length doesn't give the answer away
+      const cand = (BYGROUP[c.g] || []).filter(o => o.id !== c.id && o.tf == null && !o.cmd && o.a.length <= 220 && o.a.length >= c.a.length * 0.6 && o.a.length <= c.a.length * 1.6 + 10 && fold(o.a) !== fold(c.a));
+      const near = l => shuffle(l.slice().sort((a, b) => Math.abs(a.a.length - c.a.length) - Math.abs(b.a.length - c.a.length)).slice(0, 8));
+      const ds = []; for (const o of near(cand.filter(o => o.t === c.t)).concat(near(cand.filter(o => o.t !== c.t)))) { if (ds.length >= 3) break; if (!ds.some(x => fold(x) === fold(o.a))) ds.push(o.a); }
+      if (ds.length === 3) { const opts = shuffle(ds.concat([c.a])); return {id: c.id, type: "mc", opts, right: opts.indexOf(c.a)}; }
+    }
+    return {id: c.id, type: "self"};
+  });
+  quiz = {g, title, kind, feedback: kind !== "exam", qs, i: 0, ans: new Array(qs.length).fill(null), typed: new Array(qs.length).fill(""), revealed: false, start: now(), limit: min * 60, pts};
+  clearInterval(tick);
+  tick = setInterval(() => { if (view.name !== "test") return; const left = quiz.limit - (now() - quiz.start) / 1000; const el = document.getElementById("timer"); if (el) { el.textContent = fmtTime(left); el.classList.toggle("low", left < 60); } if (left <= 0) finishQuiz(); }, 1000);
+  go({name: "test"});
+}
+const isRight = (Q, a) => a !== null && (Q.type === "tf" ? a === BYID[Q.id].tf : Q.type === "mc" ? a === Q.right : a === 1);
+function vTest() {
+  const Q = quiz.qs[quiz.i], c = BYID[Q.id], a = quiz.ans[quiz.i], left = quiz.limit - (now() - quiz.start) / 1000, answered = a !== null, fb = quiz.feedback && answered;
+  let body;
+  if (Q.type === "tf") body = `<div class="tf">${[1, 0].map(v => { const cls = fb ? (v === c.tf ? "right" : a === v ? "wrong" : "") : a === v ? "sel" : ""; return `<button class="opt ${cls}" data-act="ans" data-v="${v}" ${fb ? "disabled" : ""} style="text-align:center;font-weight:700">${v ? "True" : "False"}</button>`; }).join("")}</div>`;
+  else if (Q.type === "mc") body = `<div class="stack" style="gap:8px">${Q.opts.map((o, k) => { const cls = fb ? (k === Q.right ? "right" : a === k ? "wrong" : "") : a === k ? "sel" : ""; return `<button class="opt ${cls}" data-act="ans" data-v="${k}" ${fb ? "disabled" : ""}><b class="chip" style="margin-right:6px">${"ABCD"[k]}</b>${md(o)}</button>`; }).join("")}</div>`;
+  else if (Q.type === "cmd") body = answered ? `<div class="xpl"><span class="eyebrow">You typed</span><div class="diff">${cmdCompare(c.cmd, quiz.typed[quiz.i]).html || "<i>nothing</i>"}</div>${fb ? `<span class="eyebrow" style="margin-top:8px">Expected</span><div class="diff">${esc(c.cmd)}</div>` : ""}</div>` : `<input class="cmdbox" id="qcmd" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="$ type the command"><button class="btn primary block" data-act="qcmd" style="margin-top:8px">Submit</button>`;
+  else body = quiz.revealed || fb ? `<div class="face"><div class="a">${md(c.a)}</div></div>${answered ? "" : `<div class="tf" style="margin-top:10px"><button class="btn" data-act="ans" data-v="0">✗ I missed it</button><button class="btn" data-act="ans" data-v="1">✓ I got it</button></div>`}` : `<p class="small muted">Answer in your head or on paper, then check.</p><button class="btn block" data-act="qreveal">Show the answer</button>`;
+  let after = "";
+  if (fb) { const ok = isRight(Q, a); after = `<div class="verdict ${ok ? "ok" : "no"}">${ok ? "✓ Correct" : "✗ Wrong"}${Q.type === "tf" ? " — it's " + (c.tf ? "TRUE" : "FALSE") : ""}</div>${Q.type === "mc" && !ok ? `<div class="xpl"><span class="eyebrow">Answer</span>${md(c.a)}</div>` : ""}${c.x ? `<div class="xpl"><span class="eyebrow">Why</span>${md(c.x)}</div>` : ""}`; }
+  const last = quiz.i === quiz.qs.length - 1;
+  return `<div class="study"><div class="shead"><button class="icon-btn" data-act="quitTest" aria-label="Finish test">✕</button><div class="grow"><div class="small muted">${esc(GROUPS[quiz.g].title)} · ${esc(quiz.title)}</div><div class="prog"><i style="width:${quiz.i / quiz.qs.length * 100}%"></i></div></div><span class="small num muted">${quiz.i + 1}/${quiz.qs.length}</span><span class="timer ${left < 60 ? "low" : ""}" id="timer">${fmtTime(left)}</span></div>
+  <div class="face"><div class="meta"><span class="chip">${esc(GROUPS[c.g].title)}</span>${topicCode(c.t) ? `<span class="chip">${topicCode(c.t)}</span>` : ""}<span>${esc(TOPICS[c.t].title)}</span><span class="pill">${{tf: "true / false", mc: "multiple choice", cmd: "type the command", self: "self-check"}[Q.type]}</span></div><div class="q">${md(c.q)}</div></div>
+  <div class="stack" style="margin-top:12px">${body}${after}</div>
+  <div class="dock"><div class="row" style="gap:8px">${quiz.i > 0 && !quiz.feedback ? `<button class="btn" data-act="qprev">Back</button>` : ""}<button class="btn primary grow" data-act="${last ? "finish" : "qnext"}" ${answered || !quiz.feedback ? "" : "disabled"}>${last ? "Finish" : answered ? "Next" : quiz.feedback ? "Answer to continue" : "Skip"}</button></div></div></div>`;
+}
+function finishQuiz() {
+  clearInterval(tick); if (!quiz || quiz.done) return; quiz.done = true;
+  const secs = Math.min(quiz.limit, (now() - quiz.start) / 1000), per = {}, missed = []; let right = 0;
+  quiz.qs.forEach((Q, k) => { const c = BYID[Q.id], ok = isRight(Q, quiz.ans[k]); (per[c.t] = per[c.t] || [0, 0])[1]++; if (ok) { right++; per[c.t][0]++; } else missed.push(Q.id); });
+  quiz.result = {id: "t" + now().toString(36), ts: now(), g: quiz.g, title: quiz.title, kind: quiz.kind, n: quiz.qs.length, right, secs: Math.round(secs), per, missed: missed.slice(0, 80), pts: quiz.pts || null};
+  S.tests.push(quiz.result); S.testsDirty.push(quiz.result.id);
+  const t = now(); for (const id of missed) { const s = S.progress[id]; if (s && s.d > t) { s.d = t; s.u = t; markDirty(id); } }
+  persist(); scheduleSync(500); go({name: "result"});
+}
+function vResult() {
+  const r = quiz.result, pct = r.n ? r.right / r.n : 0;
+  const prev = S.tests.filter(x => x.g === r.g && x.title === r.title && x.id !== r.id).slice(-4).map(x => Math.round(x.right / x.n * 100) + "%");
+  return `<div class="col" style="padding-block:calc(env(safe-area-inset-top,0px) + 24px) 40px"><div class="stack"><div class="eyebrow">${esc(GROUPS[r.g].title)} · ${r.kind === "exam" ? "exam" : "test"} result</div><h1>${esc(r.title)}</h1>
+  <div class="panel stack"><div class="row between"><div><div style="font:700 3rem/1 var(--display)" class="num">${Math.round(pct * 100)}%</div><div class="small muted num">${r.right} of ${r.n} correct · ${fmtTime(r.secs)}${prev.length ? " · before: " + prev.join(", ") : ""}</div></div>${r.pts ? `<span class="pill num" style="background:var(--accent-soft);color:var(--accent)">≈ ${(pct * r.pts).toFixed(1)} / ${r.pts} pts</span>` : ""}</div>
+  ${Object.entries(r.per).sort((a, b) => a[1][0] / a[1][1] - b[1][0] / b[1][1]).map(([t, [ok, n]]) => `<div><div class="row between small"><span>${topicCode(t) ? `<span class="chip">${topicCode(t)}</span> ` : ""}${esc(TOPICS[t] ? TOPICS[t].title : t)}</span><span class="num muted">${ok}/${n}</span></div><div class="cbar"><i style="width:${ok / n * 100}%;background:${ok / n >= .7 ? "var(--c4)" : ok / n >= .5 ? "var(--c3)" : "var(--c1)"}"></i></div></div>`).join("")}</div>
+  ${r.missed.length ? `<button class="btn primary block" data-act="studyMissed">Study the ${r.missed.length} missed cards</button>` : `<p>Clean sheet. 🎯</p>`}<button class="btn block" data-act="tab" data-v="today">Back to Today</button>
+  ${r.missed.length ? `<div class="section"><div class="eyebrow">What you missed</div>${r.missed.map(id => { const c = BYID[id]; return c ? `<div class="panel"><div style="font-weight:700">${md(c.q)}</div><div style="margin-top:6px">${md(c.cmd ? "`" + c.cmd + "`" : c.a)}</div>${c.x ? `<div class="xpl"><span class="eyebrow">Why</span>${md(c.x)}</div>` : ""}</div>` : ""; }).join("")}</div>` : ""}</div></div>`;
+}
+
+// ================================================================ search & cards
+function listCards(cards, words) { return cards.map(c => { const s = S.progress[c.id]; const r = recallOf(c); return `<button class="hit" data-act="card" data-id="${c.id}" style="border-left-color:var(--c${s ? s.c : 0})"><div class="row small muted" style="gap:6px;margin-bottom:4px"><span class="chip">${esc(GROUPS[c.g].title)}</span>${topicCode(c.t) ? `<span class="chip">${topicCode(c.t)}</span>` : ""}<span class="grow" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(TOPICS[c.t].title)}</span>${r !== null ? `<span class="num">${Math.round(r * 100)}%</span>` : ""}${S.meta.bm[c.id] && S.meta.bm[c.id].v ? "★" : ""}</div><div class="qq">${md(c.q, words)}</div><div class="aa">${md(c.cmd ? "`" + c.cmd + "`" : c.a, words)}</div></button>`; }).join(""); }
+const FLAGS = [["bm", "★ Bookmarked"], ["over", "Overdue"], ["nox", "No explanation"], ["edited", "Edited by me"], ["cmd", "Commands"]];
+function vSearch() {
+  const qv = view.q || "", gf = view.gf || "all", lv = view.lv || [], fl = view.fl || [], words = fold(qv).split(/\s+/).filter(Boolean), t = now();
+  const filtering = words.length || lv.length || fl.length || gf !== "all";
+  let hits = [];
+  if (filtering) for (const c of CARDS) {
+    if (gf !== "all" && c.g !== gf) continue;
+    if (lv.length && !lv.includes(confOf(c.id))) continue;
+    if (fl.includes("bm") && !(S.meta.bm[c.id] && S.meta.bm[c.id].v)) continue;
+    if (fl.includes("over") && !isDue(c, t)) continue;
+    if (fl.includes("nox") && c.x) continue;
+    if (fl.includes("edited") && !c.edited && !c.mine) continue;
+    if (fl.includes("cmd") && !c.cmd) continue;
+    if (words.length) { const hay = fold(c.q + " " + c.a + " " + (c.x || "") + " " + (c.cmd || "") + " " + (c.tags || []).join(" ") + " " + TOPICS[c.t].title); if (!words.every(w => hay.includes(w))) continue; }
+    hits.push(c); if (hits.length >= 150) break;
+  }
+  lastHits = hits;
+  return `<main class="col" style="padding-top:env(safe-area-inset-top,0px)"><div class="search"><input id="q" type="search" placeholder="Search questions, answers, explanations" value="${esc(qv)}" autocomplete="off" enterkeyhint="search" aria-label="Search cards">
+  <div class="filters" aria-label="Subject">${[["all", "All"]].concat(DECK.groups.map(g => [g.id, g.title])).map(([k, l]) => `<button data-act="gf" data-v="${k}" aria-pressed="${gf === k}">${l}</button>`).join("")}</div>
+  <div class="filters" aria-label="Last rating">${[0, 1, 2, 3, 4, 5].map(k => `<button data-act="lv" data-v="${k}" aria-pressed="${lv.includes(k)}"><span class="dot" style="background:var(--c${k})"></span>${k === 0 ? "New" : k}</button>`).join("")}${FLAGS.map(([k, l]) => `<button data-act="fl" data-v="${k}" aria-pressed="${fl.includes(k)}">${l}</button>`).join("")}</div></div>
+  <div class="stack" style="gap:8px">${!filtering ? `<p class="muted">Type a word or two, or pick filters: e.g. <i>bresenham</i>, <i>sigmoid derivative</i>, rated 1–2 in GRK, or BSI commands.</p>` : hits.length ? `<div class="row between"><span class="small muted num">${hits.length >= 150 ? "First 150 matches" : plural(hits.length, "match").replace("matchs", "matches")}</span><button class="btn sm" data-act="studyHits">Study these</button></div>` + listCards(hits, words) : `<p class="muted">No cards match.</p>`}</div></main>` + tabs("search");
+}
+let lastHits = [];
+function cardSheet(id) {
+  const c = BYID[id], s = S.progress[id], bm = S.meta.bm[id] && S.meta.bm[id].v, nu = noteUrl(c.t), r = recallOf(c);
+  const hist = s && s.h ? s.h.map(([ts, k]) => `<span class="pill" title="${new Date(ts * 1000).toLocaleString("en-GB")}"><span class="dot" style="background:var(--c${k})"></span>${k}</span>`).join(" ") : "";
+  openSheet(`<div class="stack"><div class="row small muted" style="gap:6px"><span class="chip">${esc(GROUPS[c.g].title)}</span>${topicCode(c.t) ? `<span class="chip">${topicCode(c.t)}</span>` : ""}<span class="grow">${esc(TOPICS[c.t].title)}</span><button class="star" data-act="bm" data-id="${id}" aria-pressed="${!!bm}" aria-label="Bookmark">${bm ? "★" : "☆"}</button></div>
+  <h2 style="font-family:var(--body)">${md(c.q)}</h2><div class="face"><div class="a">${md(c.cmd ? "`" + c.cmd + "`" + (c.a.trim() !== "`" + c.cmd + "`" ? "\n" + c.a : "") : c.a)}</div></div>${c.x ? `<div class="xpl"><span class="eyebrow">Why</span>${md(c.x)}</div>` : ""}
+  ${nu ? `<a class="note" href="${nu}">📓 Open the note in Obsidian</a>` : ""}
+  <div class="panel small stack" style="gap:6px"><div>${s ? `Last rating <b>${s.c}/5</b> · ${plural(s.r, "review")} · recall now <b>${Math.round(r * 100)}%</b> · ${isDue(c, now()) ? "<b>overdue</b>" : "next " + nextDueText([c])}` : "Not studied yet"}</div>${hist ? `<div class="row" style="gap:4px">History: ${hist}</div>` : ""}<div class="muted">${esc(c.src || "")}${c.edited ? " · edited by you" : ""}${(c.tags || []).length ? " · " + esc(c.tags.join(", ")) : ""}</div></div>
+  <div class="row" style="gap:8px"><button class="btn grow" data-act="edit" data-id="${id}">Edit</button><button class="btn primary grow" data-act="studyOne" data-id="${id}">Study now</button></div>${s ? `<button class="btn ghost block" data-act="resetCard" data-id="${id}">Forget this card (start over)</button>` : ""}<button class="btn ghost block" data-act="closeSheet">Close</button></div>`);
+}
+function editSheet(id) {
+  const c = BYID[id];
+  openSheet(`<form class="stack" id="editForm" data-id="${id}"><h2>Edit card</h2>${c.mine ? `<div class="field"><label for="eq">Question</label><textarea id="eq">${esc(c.q)}</textarea></div>` : `<p class="small muted">${md(c.q)}</p>`}
+  <div class="field"><label for="ea">Answer</label><textarea id="ea">${esc(c.a)}</textarea></div><div class="field"><label for="ex">Explanation (shown after answering)</label><textarea id="ex" placeholder="Why is this the answer? A tip, a worked number, a trap…">${esc(c.x || "")}</textarea></div>
+  <div class="row" style="gap:8px"><button type="submit" class="btn primary grow">Save</button><button type="button" class="btn" data-act="closeSheet">Cancel</button></div>
+  ${c.edited ? `<button type="button" class="btn ghost block" data-act="resetEdit" data-id="${id}">Undo my edits</button>` : ""}${c.mine ? `<button type="button" class="btn ghost block" data-act="delCard" data-id="${id}" style="color:var(--bad)">Delete this card</button>` : ""}</form>`);
+}
+function addSheet(gid) {
+  const g = GROUPS[gid];
+  openSheet(`<form class="stack" id="addForm" data-g="${gid}"><h2>New ${esc(g.title)} card</h2><div class="field"><label for="at">Topic</label><select id="at">${g.topics.map(t => `<option value="${t.id}">${esc(t.title)}</option>`).join("")}</select></div>
+  <div class="field"><label for="aq">Question</label><textarea id="aq" required></textarea></div><div class="field"><label for="aa">Answer</label><textarea id="aa" required></textarea></div><div class="field"><label for="ax">Explanation (optional)</label><textarea id="ax"></textarea></div>
+  <div class="field"><label for="atf">Type</label><select id="atf"><option value="">Question & answer</option><option value="1">True/false — TRUE</option><option value="0">True/false — FALSE</option><option value="cmd">Command — type it exactly (answer = the command)</option></select></div>
+  <div class="row" style="gap:8px"><button type="submit" class="btn primary grow">Add card</button><button type="button" class="btn" data-act="closeSheet">Cancel</button></div></form>`);
+}
+function mixSheet() {
+  openSheet(`<div class="stack"><h2>Your study mix</h2><p class="small muted">How much of each subject goes into the main Start session. Status counts too: Exam soon ×2, Maintaining ×½, Paused = out. Mixing subjects helps memory.</p>
+  ${activeGroups().map(g => { const m = settings().mix[g]; const v = m == null ? 100 : m; return `<div class="slider"><b>${esc(GROUPS[g].title)}</b><input type="range" min="0" max="100" step="10" value="${v}" data-mix="${g}" aria-label="${esc(GROUPS[g].name)} share"><span class="num small" id="mx-${g}">${v}%</span></div>`; }).join("")}
+  <div class="row" style="gap:8px"><button class="btn grow" data-act="mixReset">Reset</button><button class="btn primary grow" data-act="studyPlanClose">Start</button></div></div>`);
+}
+function statusSheet(g) {
+  openSheet(`<div class="stack"><h2>${esc(GROUPS[g].name)}: status</h2>${Object.entries(STATUS).map(([k, l]) => `<button class="opt ${statusOf(g) === k ? "sel" : ""}" data-act="setStatus" data-g="${g}" data-v="${k}"><b>${l}</b> <span class="small muted">— ${{exam: "most of the mix, exam planner raises new cards", active: "normal daily study", maintain: "few new cards, keeps old ones fresh", paused: "hidden from Today and the mix"}[k]}</span></button>`).join("")}<button class="btn ghost block" data-act="closeSheet">Close</button></div>`);
+}
+function drillSheet(gid) {
+  const set = selected(gid), cards = cardsOfTopics(set), L = levels(cards);
+  openSheet(`<div class="stack"><h2>Prepare to drill</h2><p class="small muted">One pass through the ticked topics in random order. No repeats; your ratings still count. Good as a pretest, or a last run-through the night before.</p>
+  <div style="align-self:center">${ring(L, 160, (mastery(cards) * 100).toFixed(0) + "%", "Mastery")}</div>
+  <div class="field"><label>Include cards rated</label><div class="levels">${[0, 1, 2, 3, 4, 5].map(k => `<label><input type="checkbox" data-lvl="${k}" ${k === 5 ? "" : "checked"}><span class="dot" style="background:var(--c${k})"></span>${k === 0 ? "Not started" : k} <span class="muted small num">${L[k]}</span></label>`).join("")}</div></div>
+  <button class="btn primary block" data-act="drillGo" data-g="${gid}">⚡ Drill</button><button class="btn ghost block" data-act="closeSheet">Cancel</button></div>`);
+}
+function testSheet(gid) {
+  const set = selected(gid), n = cardsOfTopics(set).length;
+  openSheet(`<form class="stack" id="testForm" data-g="${gid}"><h2>Test from ${plural(set.size, "topic")}</h2><p class="small muted">${n} cards. True/false and commands are auto-marked, short answers become multiple choice, long ones are self-checked.</p>
+  <div class="field"><label for="tn">Questions</label><input id="tn" type="number" min="5" max="${n}" value="${Math.min(20, n)}" inputmode="numeric"></div><div class="field"><label for="tm">Minutes</label><input id="tm" type="number" min="1" max="240" value="${Math.max(5, Math.round(Math.min(20, n) * 1.5))}" inputmode="numeric"></div>
+  <div class="field"><label>Mode</label><div class="seg full"><button type="button" data-act="seg" data-v="test" aria-pressed="true">Test · feedback</button><button type="button" data-act="seg" data-v="exam" aria-pressed="false">Exam · at the end</button></div></div>
+  <button type="submit" class="btn primary block">Start</button><button type="button" class="btn ghost block" data-act="closeSheet">Cancel</button></form>`);
+}
+function testsEditor(gid) {
+  const list = testsOf(gid);
+  openSheet(`<form class="stack" id="testsForm" data-g="${gid}"><h2>${esc(GROUPS[gid].title)}: tests & dates</h2><p class="small muted">Dates drive the exam planner and the countdown. Leave the date empty for an undated exam.</p>
+  ${list.map((t, i) => `<div class="panel stack" style="gap:8px"><div class="field"><label for="tt${i}">Name</label><input id="tt${i}" value="${esc(t.title)}" data-k="title" data-i="${i}"></div><div class="row" style="gap:8px"><div class="field grow"><label for="td${i}">Date</label><input id="td${i}" type="date" value="${t.date || ""}" data-k="date" data-i="${i}"></div><div class="field" style="width:90px"><label for="tq${i}">Questions</label><input id="tq${i}" type="number" min="5" value="${t.n}" data-k="n" data-i="${i}"></div><div class="field" style="width:90px"><label for="tmn${i}">Minutes</label><input id="tmn${i}" type="number" min="5" value="${t.min}" data-k="min" data-i="${i}"></div></div>
+  <details><summary class="small">Topics (${t.topics.length})</summary><div class="levels" style="margin-top:8px">${GROUPS[gid].topics.map(tp => `<label><input type="checkbox" data-topic="${tp.id}" data-i="${i}" ${t.topics.includes(tp.id) ? "checked" : ""}>${topicCode(tp.id) || esc(tp.title.slice(0, 18))}</label>`).join("")}</div></details>
+  <button type="button" class="btn ghost sm" data-act="testDel" data-g="${gid}" data-i="${i}" style="color:var(--bad);align-self:flex-start">Remove this test</button></div>`).join("")}
+  <button type="button" class="btn block" data-act="testAdd" data-g="${gid}">+ Add a test</button><div class="row" style="gap:8px"><button type="submit" class="btn primary grow">Save</button><button type="button" class="btn" data-act="closeSheet">Cancel</button></div></form>`);
+}
+function readTestsForm(gid) {
+  const base = JSON.parse(JSON.stringify(testsOf(gid)));
+  layer.querySelectorAll("[data-k]").forEach(el => { const t = base[+el.dataset.i]; const k = el.dataset.k; t[k] = k === "n" || k === "min" ? Math.max(1, +el.value || 1) : (el.value || null); });
+  base.forEach((t, i) => { t.topics = [...layer.querySelectorAll(`[data-topic][data-i="${i}"]`)].filter(x => x.checked).map(x => x.dataset.topic); if (t.date) t.note = (t.note || "").replace(/ · \w{3} \d+ \w{3} \d{4}$/, ""); });
+  return base;
+}
+function studyMenu() {
+  const s = settings();
+  openSheet(`<div class="stack"><h2>Study settings</h2>
+  <div class="field"><label>Font size</label><div class="row"><button class="icon-btn" data-act="font" data-v="-1" aria-label="Smaller">A−</button><span class="num">${s.font}</span><button class="icon-btn" data-act="font" data-v="1" aria-label="Bigger">A+</button></div></div>
+  <label class="toggle"><span><b>Reverse cards</b><br><span class="small muted">Show the answer, recall the question.</span></span><input type="checkbox" data-setb="reverse" ${s.reverse ? "checked" : ""}></label>
+  <label class="toggle"><span><b>Type before revealing</b></span><input type="checkbox" data-setb="typeAnswer" ${s.typeAnswer ? "checked" : ""}></label>
+  <button class="btn block" data-act="intervals">Repetition intervals · ${PRESETS[s.preset].label}</button><button class="btn ghost block" data-act="closeSheet">Close</button></div>`);
+}
+function intervalsSheet() {
+  const s = settings(), units = [["min", 1], ["h", 60], ["days", 1440], ["wks", 10080], ["mos", 43200], ["yrs", 525600]];
+  const fmt = m => { if (m == null) return "FSRS"; for (let i = units.length - 1; i >= 0; i--) if (m >= units[i][1] && m % units[i][1] === 0) return (m / units[i][1]) + " " + units[i][0]; return m + " min"; };
+  openSheet(`<div class="stack"><h2>Repetition intervals</h2><p class="small muted">How long each rating keeps a card away. Applies to every subject.</p>
+  ${Object.entries(PRESETS).map(([k, p]) => `<button class="opt ${s.preset === k ? "sel" : ""}" data-act="preset" data-v="${k}"><b>${p.label}</b> <span class="small muted">— ${p.hint}</span>${p.m ? `<div class="row small muted num" style="gap:10px;margin-top:4px">${p.m.map((m, i) => `<span><span class="dot" style="background:var(--c${i + 1})"></span> ${fmt(m)}</span>`).join("")}</div>` : ""}</button>`).join("")}
+  ${s.preset === "custom" ? `<div class="panel stack">${[1, 2, 3, 4, 5].map(n => `<div class="slider" style="grid-template-columns:auto 1fr auto"><span class="dot" style="background:var(--c${n});width:26px;height:26px;display:grid;place-items:center;color:#fff;font-weight:700">${n}</span><input type="number" min="1" value="${s.custom[n - 1]}" data-custom="${n - 1}" aria-label="Minutes for rating ${n}" style="border:1.5px solid var(--line);border-radius:10px;padding:8px;background:var(--card)"><span class="small muted">min · ${fmt(s.custom[n - 1])}</span></div>`).join("")}</div>` : ""}
+  <button class="btn ghost block" data-act="closeSheet">Done</button></div>`);
+}
+
+// ================================================================ Progress
+function vProgress() {
+  const d = today(), days = []; for (let k = 13; k >= 0; k--) days.push(Object.assign({d: d - k}, dayTotals(d - k)));
+  const mx = Math.max(1, ...days.map(x => x.n)), t = now();
+  const fc = []; for (let k = 0; k < 7; k++) { const end = dayStartMs(d + k + 1), start = k === 0 ? -Infinity : end - DAY; let n = 0; for (const c of CARDS) { const s = S.progress[c.id]; if (s && s.d < end && s.d >= start) n++; } fc.push({d: d + k, n}); }
+  const fx = Math.max(1, ...fc.map(x => x.n)), L = levels(CARDS), seen = CARDS.length - L[0];
+  const tot = days.reduce((s, x) => s + x.n, 0), good = days.reduce((s, x) => s + x.g, 0), week = days.slice(-7).reduce((s, x) => s + x.ms, 0);
+  const dated = []; for (const g of Object.keys(GROUPS)) for (const tt of testsOf(g)) if (tt.date && dayOf(tt.date) >= d) { const set = new Set(tt.topics), cs = (BYGROUP[g] || []).filter(c => set.has(c.t)); dated.push({g, tt, day: dayOf(tt.date), m: mastery(cs), unseen: cs.filter(c => !S.progress[c.id]).length, n: cs.length}); }
+  dated.sort((a, b) => a.day - b.day);
+  const tests = S.tests.slice(-12).reverse();
+  return `<header class="band"><div class="col">${bandTop()}<div class="hello">Progress</div><div class="kpis"><div class="kpi"><span>Recall (14 d)</span><b>${tot ? Math.round(good / tot * 100) : 0}%</b></div><div class="kpi"><span>Target</span><b>${Math.round(settings().retention * 100)}%</b></div><div class="kpi"><span>Min this week</span><b>${Math.round(week / 60000)}</b></div></div></div></header><main class="col">
+  ${dated.length ? `<div class="section"><div class="eyebrow">Ready for each test</div>${dated.map(x => `<div class="panel stack" style="gap:6px"><div class="row between"><b>${esc(GROUPS[x.g].title)} ${esc(x.tt.title)} · ${fmtDate(x.day)}</b><span class="num">${Math.round(x.m * 100)}%</span></div><div class="cbar"><i style="width:${x.m * 100}%;background:var(--accent)"></i></div><div class="small muted">${x.n} cards · ${x.unseen} not seen yet · ${x.day - d} days left</div></div>`).join("")}</div>` : ""}
+  <div class="section"><div class="eyebrow">Cards per day · last 14 days</div><div class="panel"><div class="chart">${days.map(x => `<div title="${isoOf(x.d)}: ${x.n} cards, ${Math.round(x.ms / 60000)} min"><span>${x.n || ""}</span><i style="height:${x.n / mx * 100}%"></i><span>${isoOf(x.d).slice(8)}</span></div>`).join("")}</div></div></div>
+  <div class="section"><div class="eyebrow">Coming due · next 7 days</div><div class="panel"><div class="chart">${fc.map((x, k) => `<div><span>${x.n || ""}</span><i style="height:${x.n / fx * 100}%;background:var(--c5)"></i><span>${k === 0 ? "now" : new Date(x.d * DAY).toLocaleDateString("en-GB", {weekday: "short", timeZone: "UTC"})}</span></div>`).join("")}</div></div></div>
+  <div class="section"><div class="eyebrow">Confidence of all cards</div><div class="panel stack" style="align-items:center">${ring(L, 180, (mastery(CARDS) * 100).toFixed(1) + "%", "Mastery")}<div class="row small muted num" style="justify-content:center">${[0, 1, 2, 3, 4, 5].map(k => `<span><span class="dot" style="background:var(--c${k})"></span> ${k === 0 ? "new" : k}: ${L[k]}</span>`).join("")}</div><div class="small muted">${seen} of ${CARDS.length} cards started</div></div></div>
+  <div class="section"><div class="eyebrow">By subject</div><div class="panel tablewrap"><table><thead><tr><th>Subject</th><th class="n">Mastery</th><th class="n">Started</th><th class="n">Overdue</th><th class="n">Recall now</th></tr></thead><tbody>${DECK.groups.map(g => { const cs = BYGROUP[g.id] || [], c = counts(cs), st = cs.filter(x => S.progress[x.id]); const rn = st.length ? st.reduce((a, x) => a + recallOf(x), 0) / st.length : null; return `<tr><td><b>${esc(g.title)}</b> <span class="muted small">${esc(g.name)}</span></td><td class="n">${(c.m * 100).toFixed(1)}%</td><td class="n">${c.seen}/${c.n}</td><td class="n">${c.over}</td><td class="n">${rn === null ? "—" : Math.round(rn * 100) + "%"}</td></tr>`; }).join("")}</tbody></table></div><p class="small muted">Mastery = average of your latest 1–5 ratings (unseen cards count 0), as in Brainscape. Recall now = the memory model's estimate of what you'd remember today. Recall (14 d) = share of your ratings that were 3 or higher.</p></div>
+  <div class="section"><div class="eyebrow">Tests & exams</div>${tests.length ? `<div class="panel tablewrap"><table><thead><tr><th>Date</th><th>Test</th><th class="n">Score</th><th class="n">Time</th></tr></thead><tbody>${tests.map(x => `<tr><td class="num">${new Date(x.ts).toLocaleDateString("en-GB", {day: "numeric", month: "short"})}</td><td>${esc(GROUPS[x.g] ? GROUPS[x.g].title : x.g)} ${esc(x.title)}</td><td class="n">${x.right}/${x.n}${x.pts ? ` <span class="muted">(${(x.right / x.n * x.pts).toFixed(1)}/${x.pts})</span>` : ""}</td><td class="n">${fmtTime(x.secs)}</td></tr>`).join("")}</tbody></table></div>` : `<p class="muted">No tests yet. Start one from a subject's Tests tab.</p>`}</div></main>` + tabs("progress");
+}
+
+// ================================================================ Settings
+function vSettings() {
+  const s = settings(), seg = (k, opts) => `<div class="seg full">${opts.map(([v, l]) => `<button data-act="set" data-k="${k}" data-v="${v}" aria-pressed="${String(s[k]) === String(v)}">${l}</button>`).join("")}</div>`;
+  return `<header class="band"><div class="col">${bandTop()}<div class="hello">Settings</div><div class="small" style="color:var(--band-muted);margin-top:6px">Signed in as ${esc(S.user ? S.user.email : "")}</div></div></header><main class="col">
+  <div class="section"><div class="eyebrow">Daily</div><div class="panel stack">
+  <div class="field"><label>Daily goal</label>${seg("goal", [[10, "10 min"], [15, "15 min"], [25, "25 min"], [40, "40 min"]])}</div>
+  <div class="field"><label>New cards per subject per day</label>${seg("newPerDay", [[10, "10"], [20, "20"], [40, "40"], [80, "80"]])}<span class="small muted">The exam planner raises this for a subject when a dated test needs it. Maintaining subjects get a quarter.</span></div>
+  <div class="field"><label>Cards per round</label>${seg("round", [[5, "5"], [10, "10"], [20, "20"]])}</div>
+  <p class="small muted">Reminders: the iPhone app sends one at the time you choose there, only on days you haven't studied.</p></div></div>
+  <div class="section"><div class="eyebrow">Schedule</div><div class="panel stack"><button class="btn block" data-act="intervals">Repetition intervals · ${PRESETS[s.preset].label}</button>
+  <div class="field"><label>Target recall for 4s and 5s (Smart)</label>${seg("retention", [[0.85, "85%"], [0.9, "90%"], [0.95, "95%"]])}</div>
+  <label class="toggle"><span><b>Exam planner</b><br><span class="small muted">Sees every card of a dated test 3 days early, keeps 4s and 5s due before it, and shows each card once more in the last 3 days.</span></span><input type="checkbox" data-setb="planner" ${s.planner ? "checked" : ""}></label>
+  <div class="field"><label>Test questions</label>${seg("qstyle", [["auto", "Auto"], ["self", "Self-check only"]])}</div></div></div>
+  <div class="section"><div class="eyebrow">Subjects</div><div class="panel" style="padding:4px 14px">${DECK.titles.flatMap(T => T.groups).filter(g => GROUPS[g]).map(g => `<div class="topic" style="grid-template-columns:auto 1fr auto"><span class="code" style="width:42px;height:42px">${esc(GROUPS[g].title)}</span><span class="small">${esc(GROUPS[g].name)}<br><button class="tbtn" style="padding:0;min-height:30px" data-act="testsEditor" data-g="${g}">Tests & dates (${testsOf(g).filter(t => t.date).length} dated)</button></span><button class="pill ${statusOf(g)}" data-act="statusSheet" data-g="${g}" style="border:0">${STATUS[statusOf(g)]}</button></div>`).join("")}</div><button class="btn block" data-act="mixSheet">Study mix sliders</button></div>
+  <div class="section"><div class="eyebrow">Studying</div><div class="panel"><label class="toggle"><span><b>Type the answer before revealing</b></span><input type="checkbox" data-setb="typeAnswer" ${s.typeAnswer ? "checked" : ""}></label><label class="toggle"><span><b>Reverse cards</b></span><input type="checkbox" data-setb="reverse" ${s.reverse ? "checked" : ""}></label><div class="toggle"><span><b>Font size</b></span><span class="row"><button class="icon-btn" data-act="font" data-v="-1" aria-label="Smaller">A−</button><span class="num">${s.font}</span><button class="icon-btn" data-act="font" data-v="1" aria-label="Bigger">A+</button></span></div></div></div>
+  <div class="section"><div class="eyebrow">Account & data</div><div class="panel stack"><p class="small muted">Your progress is saved on this device at once and synced to your Neon database. It works offline and catches up later.</p>
+  <div class="row" style="gap:8px"><button class="btn grow" data-act="syncNow">Sync now</button><button class="btn grow" data-act="export">Copy a backup</button></div><button class="btn ghost block" data-act="resetAsk" style="color:var(--bad)">Reset a subject's progress…</button><button class="btn block" data-act="logout">Sign out</button></div></div>
+  <div class="section"><div class="eyebrow">Keys on a keyboard</div><div class="panel small">Space = show answer · 1–5 = rate · T / F = true or false · U = undo · S = bookmark · E = edit · / = search</div><p class="small muted">Deck ${esc(DECK.version)} · ${CARDS.length} cards.</p></div></main>` + tabs("");
+}
+
+// ================================================================ events
+document.addEventListener("click", e => {
+  const el = e.target.closest("[data-act]"); if (!el) return;
+  const act = el.dataset.act, ds = el.dataset;
+  if (act === "closeSheet" && el.classList.contains("scrim") && e.target !== el) return;
+  const set = (k, v) => { S.meta.settings[k] = v; S.meta.settings.u = now(); markMeta(); };
+  switch (act) {
+    case "tab": session = null; closeSheet(); go(ds.gf ? {name: "search", gf: ds.gf} : {name: ds.v}); break;
+    case "gtab": view.tab = ds.v; render(); break;
+    case "group": closeSheet(); go({name: "group", g: ds.g}); break;
+    case "topic": go({name: "topic", t: ds.t}); break;
+    case "toggleTopic": { const s = selected(ds.g); el.checked ? s.add(ds.t) : s.delete(ds.t); render(); break; }
+    case "selToggleAll": sel[ds.g] = el.checked ? new Set(GROUPS[ds.g].topics.map(t => t.id)) : new Set(); render(); break;
+    case "order": { const o = Object.assign({}, settings().order); o[ds.g] = ds.v; set("order", o); render(); break; }
+    case "study": startStudy(cardsOfTopics(selected(ds.g)), "srs", GROUPS[ds.g].title + " · study"); break;
+    case "studyGroup": startStudy((BYGROUP[ds.g] || []).filter(c => c.t !== "grk-info"), "srs", GROUPS[ds.g].title + " · today"); break;
+    case "studyPlan": case "studyPlanClose": closeSheet(); startStudy(CARDS.filter(c => statusOf(c.g) !== "paused" && c.t !== "grk-info"), "srs", "Today's plan"); break;
+    case "studyBm": startStudy(bookmarked(), "list", "Bookmarked"); break;
+    case "studyHits": startStudy(lastHits, "list", "Search results"); break;
+    case "studyTopic": startStudy(BYTOPIC[ds.t] || [], "srs", TOPICS[ds.t].title); break;
+    case "studyOne": closeSheet(); startStudy([BYID[ds.id]], "list", "One card"); break;
+    case "studyMissed": startStudy(quiz.result.missed.map(id => BYID[id]).filter(Boolean), "list", "Missed in " + quiz.title); break;
+    case "studyWeak": { const ids = session.q.filter((id, i, a) => a.indexOf(id) === i && confOf(id) > 0 && confOf(id) <= 2); startStudy(ids.map(id => BYID[id]), "list", "Rated 1–2 in the drill"); break; }
+    case "anyway": { const scope = session.scope.map(id => BYID[id]).filter(Boolean); const pick = scope.slice().sort((a, b) => (confOf(a.id) - confOf(b.id)) || ((S.progress[a.id] ? S.progress[a.id].d : 0) - (S.progress[b.id] ? S.progress[b.id].d : 0))).slice(0, settings().round); startStudy(pick, "list", session.label, scope); break; }
+    case "reveal": reveal(); break;
+    case "cmdCheck": cmdCheck(); break;
+    case "tf": session.tfPick = +ds.v; reveal(); break;
+    case "rate": rate(+ds.n); break;
+    case "undo": undo(); break;
+    case "continue": go({name: "study"}); break;
+    case "endStudy": { const back = session && session.back; session = null; undoBuf = null; go(back && !["study", "check", "caught", "boot", "login"].includes(back.name) ? back : {name: "today"}); scheduleSync(300); break; }
+    case "studyMenu": studyMenu(); break;
+    case "font": set("font", clamp((settings().font || 0) + (+ds.v), 0, 3)); render(); if (layer.innerHTML) studyMenu(); break;
+    case "intervals": intervalsSheet(); break;
+    case "preset": set("preset", ds.v); intervalsSheet(); break;
+    case "bm": { const cur = S.meta.bm[ds.id] && S.meta.bm[ds.id].v; S.meta.bm[ds.id] = {v: cur ? 0 : 1, u: now()}; markMeta(); if (layer.innerHTML) cardSheet(ds.id); else render(); break; }
+    case "mixSheet": mixSheet(); break;
+    case "mixReset": set("mix", {}); mixSheet(); break;
+    case "statusSheet": statusSheet(ds.g); break;
+    case "setStatus": { const st = Object.assign({}, settings().status); st[ds.g] = ds.v; set("status", st); closeSheet(); render(); toast(GROUPS[ds.g].title + ": " + STATUS[ds.v]); break; }
+    case "drillSheet": drillSheet(ds.g); break;
+    case "drillGo": { const lv = new Set([...layer.querySelectorAll("[data-lvl]")].filter(x => x.checked).map(x => +x.dataset.lvl)); const cs = shuffle(cardsOfTopics(selected(ds.g)).filter(c => lv.has(confOf(c.id)))); closeSheet(); if (!cs.length) return toast("No cards with those ratings"); startStudy(cs, "drill", GROUPS[ds.g].title + " · drill"); break; }
+    case "startTest": { const t = testsOf(ds.g).find(x => x.id === ds.t); buildQuiz(ds.g, t.title, t.kind, t.topics, t.n, t.min, ds.g === "grk" ? (t.kind === "exam" ? 70 : 15) : null); break; }
+    case "customTest": testSheet(ds.g); break;
+    case "testsEditor": testsEditor(ds.g); break;
+    case "testAdd": { const list = readTestsForm(ds.g); list.push({id: ds.g + "-c" + now().toString(36), kind: "test", title: "New test", date: null, n: 20, min: 30, note: "", topics: GROUPS[ds.g].topics.map(t => t.id)}); S.meta.settings.tests = Object.assign({}, settings().tests, {[ds.g]: list}); S.meta.settings.u = now(); markMeta(); testsEditor(ds.g); break; }
+    case "testDel": { const list = readTestsForm(ds.g); list.splice(+ds.i, 1); S.meta.settings.tests = Object.assign({}, settings().tests, {[ds.g]: list}); S.meta.settings.u = now(); markMeta(); testsEditor(ds.g); break; }
+    case "seg": el.parentElement.querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", b === el)); break;
+    case "ans": if (quiz.feedback && quiz.ans[quiz.i] !== null) break; quiz.ans[quiz.i] = +ds.v; render(); break;
+    case "qcmd": { const i = document.getElementById("qcmd"); quiz.typed[quiz.i] = i ? i.value.trim() : ""; quiz.ans[quiz.i] = cmdCompare(BYID[quiz.qs[quiz.i].id].cmd, quiz.typed[quiz.i]).ok ? 1 : 0; render(); break; }
+    case "qreveal": quiz.revealed = true; render(); break;
+    case "qnext": quiz.i++; quiz.revealed = false; render(); window.scrollTo(0, 0); break;
+    case "qprev": quiz.i--; quiz.revealed = false; render(); break;
+    case "finish": finishQuiz(); break;
+    case "quitTest": openSheet(`<div class="stack"><h2>Finish now?</h2><p class="muted">Unanswered questions count as wrong.</p><button class="btn primary block" data-act="finishNow">Finish and see results</button><button class="btn block" data-act="abandon">Leave without saving</button><button class="btn ghost block" data-act="closeSheet">Keep going</button></div>`); break;
+    case "finishNow": closeSheet(); finishQuiz(); break;
+    case "abandon": closeSheet(); clearInterval(tick); quiz = null; go({name: "today"}); break;
+    case "gf": view.gf = ds.v; view.focus = false; render(); break;
+    case "lv": { const v = +ds.v, l = (view.lv || []).slice(); const i = l.indexOf(v); i >= 0 ? l.splice(i, 1) : l.push(v); view.lv = l; view.focus = false; render(); break; }
+    case "fl": { const l = (view.fl || []).slice(); const i = l.indexOf(ds.v); i >= 0 ? l.splice(i, 1) : l.push(ds.v); view.fl = l; view.focus = false; render(); break; }
+    case "card": cardSheet(ds.id); break;
+    case "edit": editSheet(ds.id); break;
+    case "addCard": addSheet(ds.g); break;
+    case "resetEdit": S.meta.edits[ds.id] = {u: now()}; afterEdit("Back to the original text"); break;
+    case "delCard": S.meta.custom[ds.id] = Object.assign({}, S.meta.custom[ds.id], {del: 1, u: now()}); afterEdit("Card deleted"); break;
+    case "resetCard": delete S.progress[ds.id]; markDirty(ds.id); closeSheet(); toast("Card reset"); render(); break;
+    case "closeSheet": closeSheet(); if (view.name === "study") render(); break;
+    case "set": { const k = ds.k; set(k, typeof DEFAULT_SETTINGS[k] === "number" ? +ds.v : ds.v); render(); break; }
+    case "syncNow": sync(); break;
+    case "export": { const body = JSON.stringify({recall: 3, exported: new Date().toISOString(), progress: S.progress, meta: S.meta, tests: S.tests}); (navigator.clipboard ? navigator.clipboard.writeText(body) : Promise.reject()).then(() => toast("Backup copied — paste it into a note"), () => toast("Couldn't copy here")); break; }
+    case "resetAsk": openSheet(`<div class="stack"><h2>Reset progress</h2><p class="muted">Clears your ratings and schedule for one subject, on every device. Cards, edits and test history stay.</p>${DECK.groups.map(g => `<button class="btn block" data-act="resetG" data-g="${g.id}">Reset ${esc(g.title)} · ${esc(g.name)}</button>`).join("")}<button class="btn ghost block" data-act="closeSheet">Cancel</button></div>`); break;
+    case "resetG": { for (const c of BYGROUP[ds.g] || []) if (S.progress[c.id]) { delete S.progress[c.id]; markDirty(c.id); } closeSheet(); toast(GROUPS[ds.g].title + " progress reset"); render(); break; }
+    case "logout": relay("/signout", {session: S.session}).catch(() => {}); IDB.del("state"); S = blankState(); JWT = null; go({name: "login"}); break;
+    case "loginMode": view = {name: "login", mode: view.mode === "signup" ? "signin" : "signup"}; render(); break;
+  }
+});
+function afterEdit(msg) { markMeta(); indexDeck(); closeSheet(); toast(msg); render(); }
+document.addEventListener("input", e => {
+  if (e.target.id === "q") { clearTimeout(window._st); const v = e.target.value; window._st = setTimeout(() => { view.q = v; view.focus = true; render(); }, 180); }
+  if ((e.target.id === "typed" || e.target.id === "cmdIn") && session) session.typed = e.target.value;
+  if (e.target.dataset.mix) { const m = Object.assign({}, settings().mix); m[e.target.dataset.mix] = +e.target.value; S.meta.settings.mix = m; S.meta.settings.u = now(); document.getElementById("mx-" + e.target.dataset.mix).textContent = e.target.value + "%"; markMeta(); }
+});
+document.addEventListener("change", e => {
+  if (e.target.dataset.setb) { S.meta.settings[e.target.dataset.setb] = e.target.checked; S.meta.settings.u = now(); markMeta(); }
+  if (e.target.dataset.custom) { const c = settings().custom.slice(); c[+e.target.dataset.custom] = Math.max(1, +e.target.value || 1); S.meta.settings.custom = c; S.meta.settings.u = now(); markMeta(); intervalsSheet(); }
+});
+document.addEventListener("submit", async e => {
+  e.preventDefault(); const f = e.target;
+  if (f.id === "loginForm") {
+    const email = f.querySelector("#le").value.trim().toLowerCase(), pw = f.querySelector("#lp").value, signup = view.mode === "signup";
+    const btn = f.querySelector("button[type=submit]"); btn.disabled = true; btn.textContent = signup ? "Creating…" : "Signing in…";
+    try {
+      takeLogin(await relay(signup ? "/signup" : "/signin", signup ? {email, password: pw, name: email.split("@")[0]} : {email, password: pw}));
+      view = {name: "boot"}; render(); await sync();
+      if (DECK && S.session) go({name: "today"});
+    } catch (err) { view = Object.assign({}, view, {email, err: signup ? (err.status === 422 || err.status === 400 ? "Can't create this account: " + err.message : err.message) : (err.status === 401 ? "Wrong email or password." : "Can't reach the login service — " + err.message)}); render(); }
+  } else if (f.id === "editForm") {
+    const id = f.dataset.id, c = BYID[id], a = f.querySelector("#ea").value.trim(), x = f.querySelector("#ex").value.trim();
+    if (c.mine) S.meta.custom[id] = Object.assign({}, S.meta.custom[id], {q: f.querySelector("#eq").value.trim(), a, x, u: now()});
+    else { const orig = DECK.cards.find(o => o.id === id); const ed = {u: now()}; if (a !== orig.a) ed.a = a; if (x !== (orig.x || "")) ed.x = x; S.meta.edits[id] = ed; }
+    afterEdit("Saved");
+  } else if (f.id === "addForm") {
+    const g = f.dataset.g, id = g + "-u" + now().toString(36), tf = f.querySelector("#atf").value;
+    const c = {g, t: f.querySelector("#at").value, q: f.querySelector("#aq").value.trim(), a: f.querySelector("#aa").value.trim(), x: f.querySelector("#ax").value.trim(), u: now()};
+    if (tf === "cmd") c.cmd = c.a.replace(/^`|`$/g, ""); else if (tf !== "") c.tf = +tf;
+    if (!c.q || !c.a) return toast("Fill in a question and an answer");
+    S.meta.custom[id] = c; afterEdit("Card added");
+  } else if (f.id === "testForm") {
+    const g = f.dataset.g, n = +f.querySelector("#tn").value || 20, m = +f.querySelector("#tm").value || 20, kind = f.querySelector('[data-act="seg"][aria-pressed="true"]').dataset.v;
+    closeSheet(); buildQuiz(g, kind === "exam" ? "Custom exam" : "Custom test", kind, [...selected(g)], n, m, null);
+  } else if (f.id === "testsForm") {
+    const g = f.dataset.g, list = readTestsForm(g);
+    S.meta.settings.tests = Object.assign({}, settings().tests, {[g]: list}); S.meta.settings.u = now(); markMeta(); closeSheet(); render(); toast("Tests saved");
+  }
+});
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape" && layer.innerHTML) return closeSheet();
+  if (e.target.id === "cmdIn" && e.key === "Enter") { e.preventDefault(); return cmdCheck(); }
+  if (e.target.id === "qcmd" && e.key === "Enter") { e.preventDefault(); return document.querySelector('[data-act="qcmd"]').click(); }
+  if (e.target.matches && e.target.matches("input,textarea,select")) return;
+  if (e.key === "/" && !["study", "test"].includes(view.name)) { e.preventDefault(); return go({name: "search", focus: true}); }
+  if (view.name === "study" && session && !layer.innerHTML) {
+    const c = curCard(); if (!c) return;
+    if (!session.revealed) { if (c.tf != null && (e.key === "t" || e.key === "f")) { session.tfPick = e.key === "t" ? 1 : 0; reveal(); } else if (c.tf == null && (e.key === " " || e.key === "Enter")) { e.preventDefault(); reveal(); } }
+    else if (/^[1-5]$/.test(e.key)) rate(+e.key);
+    if (e.key === "u" || ((e.metaKey || e.ctrlKey) && e.key === "z")) undo();
+    if (e.key === "s") document.querySelector('.face [data-act="bm"]').click();
+    if (e.key === "e") editSheet(c.id);
+  }
+});
+// ================================================================ boot
+(async () => {
+  const saved = await IDB.get("state");
+  if (saved && saved.session) { S = Object.assign(blankState(), saved); S.meta.settings = Object.assign({}, DEFAULT_SETTINGS, S.meta.settings || {}); ["edits", "custom", "bm", "days"].forEach(k => S.meta[k] = S.meta[k] || {}); }
+  DECK = await IDB.get("deck");
+  if (!S.session) { view = {name: "login"}; return render(); }
+  if (DECK) { indexDeck(); view = {name: "today"}; render(); }
+  await sync();
+  if (!S.session) return;
+  if (!DECK) { view = {name: "login", err: "Couldn't load your cards. Check the connection and sign in again."}; return render(); }
+  if (view.name === "boot") go({name: "today"});
+})();
+if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
+})();
+</script>
+</body>
+</html>
