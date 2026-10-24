@@ -802,29 +802,41 @@ function vLogin() {
 // ================================================================ Learn (home): every subject → topics with progress
 function greeting() { const h = new Date().getHours(); return h < 5 ? "Good night" : h < 12 ? "Good morning" : h < 18 ? "Hi" : "Good evening"; }
 const ORDER = {exam: 0, active: 1, maintain: 2, paused: 3};
-function orderedGroups() { return DECK.titles.flatMap(T => T.groups).filter(g => GROUPS[g]).sort((a, b) => ORDER[statusOf(a)] - ORDER[statusOf(b)]); }
+function orderedGroups(folder) { return DECK.titles.filter(T => !folder || T.id === folder).flatMap(T => T.groups).filter(g => GROUPS[g]).sort((a, b) => ORDER[statusOf(a)] - ORDER[statusOf(b)]); }
+const FOLDERS = () => DECK.titles.map(T => [T.id, T.title]);
+const curFolder = () => { const f = LS.get("folder"); return DECK.titles.some(T => T.id === f) ? f : DECK.titles[0].id; };
+const isReading = g => !(BYGROUP[g] || []).length;         // guides: notes only, no cards
 function weakCards(list) { return studyCards(list).filter(c => weakness(c)); }
 function topicRow(t, selecting) {
   const cs = BYTOPIC[t.id] || [], c = counts(cs), code = topicCode(t.id), hid = hiddenTopic(t.id), sel = picked.has(t.id);
+  if (!cs.length && !selecting) { const v = (libTopic(t.id).videos || []).length;      // a note to read: no cards, no bar
+    return `<button class="trow" data-act="topic" data-t="${t.id}"><span class="chip">${code || "📖"}</span><span class="tt"><b>${esc(t.title)}</b><span class="tags"><span class="muted">notes${v ? " · " + plural(v, "video") : ""}</span></span></span><span class="pct">›</span></button>`; }
   const tags = [c.weak ? `<span class="t-bad">${c.weak} don't know</span>` : "", c.over ? `<span class="t-over">${c.over} due</span>` : "", c.fresh ? `<span class="t-new">${c.fresh} new</span>` : "", hid ? `<span class="t-new">hidden</span>` : ""].filter(Boolean).join("");
   return `<button class="trow ${sel ? "sel" : ""}" data-act="${selecting ? "pick" : "topic"}" data-t="${t.id}" ${hid ? 'style="opacity:.55"' : ""}>${selecting ? `<input type="checkbox" tabindex="-1" ${sel ? "checked" : ""} aria-hidden="true">` : (code ? `<span class="chip">${code}</span>` : `<span class="chip">•</span>`)}<span class="tt"><b>${esc(t.title)}</b>${cbar(c.L, 6)}<span class="tags">${tags || `<span class="muted">${c.n} cards · all good</span>`}</span></span><span class="pct">${Math.round(c.m * 100)}%</span></button>`;
 }
 function vLearn() {
   const mins = minutesToday(), goal = settings().goal, name = (S.user && (S.user.name || S.user.email.split("@")[0]) || "").split(/[ ._0-9]/)[0];
   const last = LS.get("last"), lastOk = last && last.ids && last.ids.length && now() - last.at < 3 * DAY;
-  const selecting = !!view.select;
+  const selecting = !!view.select, folder = curFolder();
   let h = `<header class="band"><div class="col">${bandTop()}<div class="hello">${greeting()}${name ? ", " + esc(name[0].toUpperCase() + name.slice(1)) : ""}!</div>
   <div class="kpis"><div class="kpi"><span>Day streak</span><b>${streak()}</b></div><div class="kpi"><span>Today</span><b>${Math.round(mins)}<small style="font-size:.85rem;color:var(--band-muted)"> / ${goal} min</small></b></div><div class="kpi"><span>Don't know</span><b>${weakCards(CARDS).length}</b></div></div>
   <div class="goal" style="margin-top:10px"><div class="gbar"><i style="width:${Math.min(100, mins / goal * 100)}%"></i></div><span class="small" style="color:var(--band-muted)">${mins >= goal ? "Goal done ✓" : Math.max(1, Math.round(goal - mins)) + " min to go"}</span></div>
   <div class="studybar">${lastOk ? `<button class="btn primary" data-act="resume">Continue · ${esc(last.label || "last session")} ▸</button>` : `<button class="btn primary" data-act="studyPlan">Start today's mix ▸</button>`}<button class="icon-btn" data-act="mixSheet" aria-label="Adjust the study mix" title="Study mix">⚖</button></div>
+  <div class="seg full" role="tablist" style="margin-top:14px">${FOLDERS().map(([id, t]) => `<button role="tab" data-act="folder" data-v="${id}" aria-pressed="${folder === id}">${esc(t)}</button>`).join("")}</div>
   <div class="row small" style="margin-top:10px;color:var(--band-muted);gap:8px"><span>Pick a topic below to study it, or</span><button class="back" style="min-height:0;color:#fff;text-decoration:underline" data-act="selectMode">${selecting ? "stop combining topics" : "combine several topics"}</button></div></div></header><main class="col">`;
   // what I don't know
-  const weakBy = orderedGroups().filter(g => statusOf(g) !== "paused").map(g => ({g, w: weakCards(BYGROUP[g] || []), over: counts(studyCards(BYGROUP[g] || [])).over})).filter(x => x.w.length || x.over);
+  const weakBy = orderedGroups(folder).filter(g => statusOf(g) !== "paused").map(g => ({g, w: weakCards(BYGROUP[g] || []), over: counts(studyCards(BYGROUP[g] || [])).over})).filter(x => x.w.length || x.over);
   if (weakBy.length) h += `<div class="section"><div class="row between"><div class="eyebrow">What you don't know yet</div><button class="btn sm ghost" data-act="weakAll">See all ›</button></div><div class="weak">${weakBy.map(x => `<button data-act="weakStudy" data-g="${x.g}"><span class="row" style="gap:8px"><span class="chip">${esc(GROUPS[x.g].title)}</span><b class="t-bad">${x.w.length}</b></span><span class="small muted">${x.w.length ? "shaky / fading cards" : ""}${x.w.length && x.over ? " · " : ""}${x.over ? x.over + " due" : ""}</span></button>`).join("")}</div></div>`;
-  for (const g of orderedGroups()) {
-    const G = GROUPS[g], all = BYGROUP[g] || [], c = counts(studyCards(all)), st = statusOf(g), nt = nextTest(g);
+  for (const g of orderedGroups(folder)) {
+    const G = GROUPS[g], all = BYGROUP[g] || [], c = counts(studyCards(all)), st = statusOf(g), nt = nextTest(g), reading = isReading(g);
+    if (reading && selecting) continue;
     const topics = G.topics.filter(t => t.id !== "grk-info" || !selecting);
-    const paused = st === "paused" && !view["open_" + g];
+    const paused = (st === "paused" || reading) && !view["open_" + g];
+    if (reading) {
+      h += `<div class="section"><div class="subject"><header><span class="code">${esc(G.title)}</span><span class="stack" style="gap:4px;min-width:0"><b>${esc(G.name)}</b><span class="small muted">${plural(G.topics.length, "note")} to read · listen · watch</span></span></header>
+      ${paused ? `<div class="sfoot"><button class="btn sm" data-act="openPaused" data-g="${g}">Show ${plural(G.topics.length, "note")}</button></div>` : topics.map(t => topicRow(t, false)).join("")}</div></div>`;
+      continue;
+    }
     h += `<div class="section"><div class="subject"><header><span class="code">${esc(G.title)}</span><span class="stack" style="gap:4px;min-width:0"><b>${esc(G.name)}</b><span class="row small" style="gap:6px"><button class="pill ${st}" data-act="statusSheet" data-g="${g}">${STATUS[st]} ▾</button>${nt ? `<button class="pill" data-act="testpage" data-g="${g}" data-t="${nt.t.id}">${esc(nt.t.title)} · ${nt.day - today()} d</button>` : ""}<span class="muted num">${Math.round(c.m * 100)}% · ${c.seen}/${c.n}</span></span></span><button class="icon-btn" data-act="subjectMenu" data-g="${g}" aria-label="More for ${esc(G.title)}">⋯</button></header>
     ${paused ? `<div class="sfoot"><button class="btn sm" data-act="openPaused" data-g="${g}">Show ${G.topics.length} topics</button></div>` : topics.map(t => topicRow(t, selecting)).join("") +
       `<div class="sfoot"><button class="btn sm" data-act="studyGroup" data-g="${g}">Study ${esc(G.title)}</button>${c.weak ? `<button class="btn sm" data-act="weakStudy" data-g="${g}">Fix ${c.weak} weak</button>` : ""}<button class="btn sm" data-act="tab" data-v="tests" data-g="${g}">Tests</button></div>`}</div></div>`;
@@ -866,7 +878,7 @@ function vTopic() {
   let h = `<header class="band"><div class="col"><button class="back" data-act="tab" data-v="learn">‹ ${esc(GROUPS[T.g].name)}</button>
   <div class="row" style="margin-top:6px;gap:12px;flex-wrap:nowrap"><div class="grow"><h1 style="font-size:1.35rem">${topicCode(view.t) ? `<span class="chip" style="vertical-align:3px">${topicCode(view.t)}</span> ` : ""}${esc(T.title)}</h1>
   <div class="small" style="color:var(--band-muted);margin-top:4px">${c.n} cards · ${c.known} known · <span style="color:#F59BD8">${c.weak} don't know</span> · ${c.fresh} new</div></div>${ring(c.L, 74, Math.round(c.m * 100) + "%", "")}<button class="icon-btn" data-act="topicMenu" data-t="${view.t}" aria-label="More">⋯</button></div>
-  <div class="studybar"><button class="btn primary" data-act="studyTopic" data-t="${view.t}">Study ▸</button>${c.weak ? `<button class="btn" data-act="studyIds" data-ids="${weakCards(cs).map(x => x.id).join(",")}" data-label="${esc(T.title)} · weak">Fix ${c.weak}</button>` : ""}<button class="btn" data-act="drillTopic" data-t="${view.t}">⚡ Drill</button></div></div></header>
+  ${cs.length ? `<div class="studybar"><button class="btn primary" data-act="studyTopic" data-t="${view.t}">Study ▸</button>${c.weak ? `<button class="btn" data-act="studyIds" data-ids="${weakCards(cs).map(x => x.id).join(",")}" data-label="${esc(T.title)} · weak">Fix ${c.weak}</button>` : ""}<button class="btn" data-act="drillTopic" data-t="${view.t}">⚡ Drill</button></div>` : ""}</div></header>
   <main class="col"><div class="subtabs" role="tablist">${TTABS.map(([k, l]) => `<button role="tab" data-act="ttab" data-v="${k}" aria-pressed="${tab === k}">${l}${k === "slides" && slides.length ? " · " + slides.length : k === "videos" && (L.videos || []).length ? " · " + L.videos.length : ""}</button>`).join("")}</div>`;
   needNotes([view.t]);
   if (tab === "learn") {
@@ -1357,6 +1369,8 @@ function slideStep(d) { const v = window._sv; if (!v) return; const j = clamp(v.
 
 // ================================================================ events
 document.addEventListener("click", async e => {
+  const link = e.target.closest && e.target.closest('a[href^="#topic="]');      // [[links]] between notes, like Obsidian
+  if (link) { e.preventDefault(); const t = link.getAttribute("href").slice(7); if (TOPICS[t]) { closeSheet(); go({name: "topic", t, tab: "learn"}); } return; }
   const el = e.target.closest("[data-act]"); if (!el) return;
   const act = el.dataset.act, ds = el.dataset;
   if (act === "closeSheet" && (el.classList.contains("scrim")) && e.target !== el) return;
@@ -1378,6 +1392,7 @@ document.addEventListener("click", async e => {
     case "testPicked": { const ts = [...picked]; testSheet(ts, TOPICS[ts[0]].g); break; }
     case "listenPicked": listen(plural(picked.size, "topic"), [...picked].flatMap(t => [TOPICS[t].title + ".", libTopic(t).summary || "", libTopic(t).remember || ""])); break;
     case "openPaused": view["open_" + ds.g] = 1; render(); break;
+    case "folder": LS.set("folder", ds.v); render(); break;
     case "resume": { const l = LS.get("last"); const cs = (l.ids || []).map(id => BYID[id]).filter(Boolean); startStudy(cs, l.kind === "drill" ? "srs" : (l.kind || "srs"), l.label || "Continue"); break; }
     case "studyPlan": case "studyPlanClose": closeSheet(); startStudy(CARDS.filter(c => statusOf(c.g) !== "paused" && c.t !== "grk-info"), "srs", "Today's mix"); break;
     case "studyGroup": closeSheet(); startStudy((BYGROUP[ds.g] || []).filter(c => c.t !== "grk-info"), "srs", GROUPS[ds.g].title); break;
