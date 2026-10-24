@@ -145,8 +145,9 @@ main.col{padding-block:6px 120px}
 .prose code{font:.88em var(--mono);background:var(--soft);padding:1px 5px;border-radius:5px}
 .prose pre code{background:none;padding:0}
 .prose table{border-collapse:collapse;display:block;overflow-x:auto;font-size:.9rem;margin:.6em 0}
-.prose th,.prose td{border:1px solid var(--line);padding:6px 8px;text-align:left;vertical-align:top}
+.prose th,.prose td{border:1px solid var(--line);padding:6px 8px;text-align:left;vertical-align:top;overflow-wrap:normal;min-width:5.5ch}
 .prose img{max-width:100%;border-radius:10px}
+.prose .math{font-family:var(--mono);font-size:.92em}.prose div.math{overflow-x:auto;margin:.6em 0}.prose .katex{font-size:1.05em}
 .prose a{color:var(--accent)}
 .prose .mermaid{background:var(--card);border-radius:10px;padding:8px;overflow-x:auto;text-align:left} .prose .mermaid svg{max-width:none!important;height:auto}
 details.sec{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:0 14px}
@@ -303,17 +304,41 @@ function md(s, hl) {
   for (const w of hl || []) { if (w.length < 2) continue; h = h.replace(new RegExp("(" + w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + ")(?![^<]*>)", "gi"), "<mark>$1</mark>"); }
   return h;
 }
-// full markdown for notes (her vault) and longer AI answers: marked + DOMPurify, mermaid diagrams rendered lazily
+// full markdown for notes (her vault) and longer AI answers: marked + DOMPurify; mermaid diagrams and $TeX$ maths are drawn lazily,
+// note pictures ![alt](key:…) come from the private bucket
+const attr = s => esc(s).replace(/[|_*[\]\\`~]/g, ch => "&#" + ch.charCodeAt(0) + ";");     // inert for marked (tables, emphasis, links)
 function mdFull(s) {
   if (!window.marked || !window.DOMPurify) return "<p>" + md(s) + "</p>";
-  const src = String(s || "").replace(/```mermaid\n([\s\S]*?)```/g, (_, g) => `<pre class="mermaid">${esc(g)}</pre>`);
+  const keep = [];
+  let src = String(s || "").replace(/```mermaid\n([\s\S]*?)```/g, (_, g) => `<pre class="mermaid">${esc(g)}</pre>`);
+  src = src.replace(/```[\s\S]*?```|`[^`\n]+`/g, m => { keep.push(m); return "@@K" + (keep.length - 1) + "@@"; });
+  const block = (_, t) => `<div class="math" data-tex="${attr(t.trim())}" data-d="1">${attr(t.trim())}</div>`;
+  src = src.replace(/\$\$([\s\S]+?)\$\$/g, block).replace(/\\\[([\s\S]+?)\\\]/g, block)
+    .replace(/\\\(([\s\S]+?)\\\)/g, (_, t) => `<span class="math" data-tex="${attr(t.trim())}">${attr(t.trim())}</span>`)
+    .replace(/(^|[^\\$\w])\$([^\s$](?:[^$\n]*?[^\s$\\])?)\$(?![\w$])/gm, (_, p, t) => `${p}<span class="math" data-tex="${attr(t)}">${attr(t)}</span>`)
+    .replace(/!\[([^\]]*)\]\(key:([^)\s]+)\)/g, (_, alt, k) => `<img data-key="${attr(k)}" alt="${attr(alt)}">`)
+    .replace(/@@K(\d+)@@/g, (_, i) => keep[i]);
   return DOMPurify.sanitize(marked.parse(src, {gfm: true, breaks: false}), {ADD_TAGS: ["details", "summary"]});
+}
+// wordy table cells get a readable width (the table scrolls sideways instead of squeezing them)
+function fitTables(root) { (root || document).querySelectorAll(".prose td, .prose th").forEach(td => { const n = td.textContent.length; if (n > 24) td.style.minWidth = Math.min(30, 10 + n / 6) + "ch"; }); }
+let katexLoading = null;
+function drawMath(root) {
+  const els = (root || document).querySelectorAll(".math:not([data-done])");
+  if (!els.length) return;
+  const go = () => els.forEach(el => { try { window.katex.render(el.dataset.tex, el, {displayMode: !!el.dataset.d, throwOnError: false}); el.dataset.done = 1; } catch (e) {} });
+  if (window.katex) return go();
+  if (!katexLoading) katexLoading = new Promise(res => {
+    const l = document.createElement("link"); l.rel = "stylesheet"; l.href = "https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css"; document.head.appendChild(l);
+    const s = document.createElement("script"); s.src = "https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"; s.onload = res; s.onerror = res; document.head.appendChild(s);
+  });
+  katexLoading.then(() => window.katex && go());
 }
 let mermaidLoading = null;
 function drawMermaid(root) {
   const blocks = (root || document).querySelectorAll("pre.mermaid:not([data-done])");
   if (!blocks.length) return;
-  const go = () => { try { window.mermaid.initialize({startOnLoad: false, theme: matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "neutral", flowchart: {useMaxWidth: false}, sequence: {useMaxWidth: false}}); window.mermaid.run({nodes: [...blocks]}); blocks.forEach(b => b.dataset.done = 1); } catch (e) {} };
+  const go = () => { try { window.mermaid.initialize({startOnLoad: false, theme: matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "neutral", flowchart: {useMaxWidth: false, htmlLabels: false}, themeVariables: {fontFamily: "-apple-system, system-ui, sans-serif", fontSize: "15px"}, sequence: {useMaxWidth: false}}); window.mermaid.run({nodes: [...blocks]}); blocks.forEach(b => b.dataset.done = 1); } catch (e) {} };
   if (window.mermaid) return go();
   if (!mermaidLoading) mermaidLoading = new Promise(res => { const s = document.createElement("script"); s.src = "https://cdnjs.cloudflare.com/ajax/libs/mermaid/10.9.1/mermaid.min.js"; s.onload = res; s.onerror = res; document.head.appendChild(s); });
   mermaidLoading.then(() => window.mermaid && go());
@@ -631,6 +656,7 @@ function speechText(mdText) {
     .replace(/```[\s\S]*?```/g, " (code example skipped) ")
     .replace(/^\|.*\|$/gm, l => l.replace(/^\||\|$/g, "").split("|").map(x => x.trim()).filter(x => x && !/^:?-+:?$/.test(x)).join(", ") + ".")
     .replace(/!\[[^\]]*\]\([^)]*\)/g, "").replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
+    .replace(/\$\$?([^$]+)\$\$?/g, (_, t) => t.replace(/\\(text|mathrm|mathbf)\{([^}]*)\}/g, "$2").replace(/\\(cdot|times)/g, " times ").replace(/\\[a-zA-Z]+/g, " ").replace(/[{}^_]/g, " "))
     .replace(/[#>*_`~]|<[^>]+>/g, "").replace(/\[figure: [^\]]+\]/g, "")
     .replace(/→/g, " to ").replace(/←/g, " from ").replace(/×/g, " times ").replace(/≈/g, " about ").replace(/≥/g, " at least ").replace(/≤/g, " at most ").replace(/−/g, " minus ")
     .replace(/[ \t]+/g, " ").replace(/\n{2,}/g, "\n").trim();
@@ -704,7 +730,7 @@ async function askAI(mode, payload) {
 }
 async function aiInto(el, mode, payload) {
   el.innerHTML = `<span class="spin"></span> Thinking…`;
-  try { const t = await askAI(mode, payload); el.innerHTML = mdFull(t); }
+  try { const t = await askAI(mode, payload); el.innerHTML = mdFull(t); drawMath(el); }
   catch (e) { el.innerHTML = `<span class="err">${esc(e.status === 503 ? "The AI helper isn't switched on yet (no keys)." : e.message)}</span>`; }
 }
 
@@ -731,9 +757,9 @@ function render() {
   app.classList.toggle("withtabs", !!app.querySelector(".tabs"));
   if (view.name === "search" && view.focus) { const i = document.getElementById("q"); if (i) { i.focus(); i.setSelectionRange(i.value.length, i.value.length); } }
   if (view.name === "study") { const i = document.getElementById("cmdIn"); if (i && !session.revealed) i.focus(); }
-  drawMermaid(app); fillImages(app); drawPlayer();
+  drawMermaid(app); drawMath(app); fitTables(app); fillImages(app); drawPlayer();
 }
-function openSheet(h) { layer.innerHTML = `<div class="scrim" data-act="closeSheet"><div class="sheet" role="dialog" aria-modal="true">${h}</div></div>`; fillImages(layer); drawMermaid(layer); }
+function openSheet(h) { layer.innerHTML = `<div class="scrim" data-act="closeSheet"><div class="sheet" role="dialog" aria-modal="true">${h}</div></div>`; fillImages(layer); drawMermaid(layer); drawMath(layer); fitTables(layer); }
 function closeSheet() { layer.innerHTML = ""; }
 
 // ================================================================ login

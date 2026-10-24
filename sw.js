@@ -1,6 +1,6 @@
 // Recall offline worker: the app shell is cached so the site opens without a connection.
 // Pages are fetched fresh when online; Neon calls are never cached (the app keeps its own data in IndexedDB).
-const CACHE = "recall-v5";
+const CACHE = "recall-v6";
 const SHELL = ["./", "index.html", "manifest.webmanifest", "icon-192.png", "icon-512.png", "apple-touch-icon.png"];
 self.addEventListener("install", e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting())); });
 self.addEventListener("activate", e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim())); });
