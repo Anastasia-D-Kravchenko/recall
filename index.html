@@ -516,14 +516,37 @@ const testsOf = g => settings().tests[g] || (GROUPS[g] ? GROUPS[g].tests : []);
 const hiddenTopic = t => !!(settings().hidden || {})[t];
 const studyCards = list => list.filter(c => !hiddenTopic(c.t));
 function topicCode(tid) {
-  const T = TOPICS[tid]; if (!T || !T.lec || !T.lec.length) return "";
+  const T = TOPICS[tid]; if (T && T.code) return T.code;
+  if (!T || !T.lec || !T.lec.length) return "";
   if (T.g === "grk") { const a = T.lec[0], b = T.lec[T.lec.length - 1]; return a === b ? "L" + a : "L" + a + "–" + b; }
   if (T.g === "bsi") return T.id === "bsi-lab" ? "LAB" : "B0" + T.lec[0];
   if (T.g === "byt") return "Y0" + T.lec[0];
   return "";
 }
 const noteUrl = tid => TOPICS[tid] && TOPICS[tid].note ? "obsidian://open?vault=" + encodeURIComponent(VAULT) + "&file=" + encodeURIComponent(TOPICS[tid].note) : null;
-const libTopic = tid => (LIB && LIB.topics && LIB.topics[tid]) || {};
+// career module notes live in their own content rows (100+) and arrive the first time one of their topics is opened
+const NOTES = {}, NOTES_LOADING = {};
+const libTopic = tid => {
+  const T = (LIB && LIB.topics && LIB.topics[tid]) || {}, n = T.lazy && NOTES[T.lazy];
+  return n && n.topics[tid] ? Object.assign({}, T, n.topics[tid]) : T;
+};
+const notesMissing = tid => { const T = (LIB && LIB.topics && LIB.topics[tid]) || {}; return !!T.lazy && !(NOTES[T.lazy] && NOTES[T.lazy].version === LIB.version); };
+function needNotes(tids) {
+  const rows = [...new Set(tids.filter(notesMissing).map(t => LIB.topics[t].lazy))];
+  for (const row of rows) {
+    if (NOTES_LOADING[row]) continue;
+    NOTES_LOADING[row] = (async () => {
+      let d = await IDB.get("notes" + row);
+      if (!d || d.version !== LIB.version) {
+        d = S.session === "demo" ? await (await fetch(`/data/notes/${row}.json`, {cache: "no-cache"})).json() : ((await rest("GET", `/content?select=data&id=eq.${row}`))[0] || {}).data;
+        if (d) IDB.set("notes" + row, d);
+      }
+      if (d) NOTES[row] = d;
+    })().then(() => render(), e => { NOTES[row] = {version: LIB.version, topics: {}}; toast("Couldn't load the notes — " + e.message); render(); })
+      .finally(() => { delete NOTES_LOADING[row]; });
+  }
+  return rows.length > 0;
+}
 const cardLink = id => (LIB && LIB.links && LIB.links[id]) || null;
 
 // ================================================================ scheduler (same rules as the iPhone app)
@@ -845,12 +868,14 @@ function vTopic() {
   <div class="small" style="color:var(--band-muted);margin-top:4px">${c.n} cards · ${c.known} known · <span style="color:#F59BD8">${c.weak} don't know</span> · ${c.fresh} new</div></div>${ring(c.L, 74, Math.round(c.m * 100) + "%", "")}<button class="icon-btn" data-act="topicMenu" data-t="${view.t}" aria-label="More">⋯</button></div>
   <div class="studybar"><button class="btn primary" data-act="studyTopic" data-t="${view.t}">Study ▸</button>${c.weak ? `<button class="btn" data-act="studyIds" data-ids="${weakCards(cs).map(x => x.id).join(",")}" data-label="${esc(T.title)} · weak">Fix ${c.weak}</button>` : ""}<button class="btn" data-act="drillTopic" data-t="${view.t}">⚡ Drill</button></div></div></header>
   <main class="col"><div class="subtabs" role="tablist">${TTABS.map(([k, l]) => `<button role="tab" data-act="ttab" data-v="${k}" aria-pressed="${tab === k}">${l}${k === "slides" && slides.length ? " · " + slides.length : k === "videos" && (L.videos || []).length ? " · " + L.videos.length : ""}</button>`).join("")}</div>`;
+  needNotes([view.t]);
   if (tab === "learn") {
     const hasAny = L.summary || L.remember || (L.sections || []).length || L.chapter;
     if (!hasAny) h += `<div class="panel" style="margin-top:14px"><b>No notes for this topic yet.</b> <span class="muted">Study the cards, or ask the AI for a summary.</span><div style="margin-top:10px"><button class="btn sm" data-act="aiSummary" data-t="${view.t}">✨ Make a summary</button></div><div id="aiSum"></div></div>`;
     if (L.summary) h += `<div class="section"><div class="eyebrow">In one minute</div><div class="panel prose">${mdFull(L.summary)}</div></div>`;
     if (L.remember) h += `<div class="section"><div class="eyebrow">What to remember</div><div class="panel prose">${mdFull(L.remember)}</div></div>`;
     if (L.exam) h += `<div class="section"><details class="sec"><summary>Exam questions with answers</summary><div class="prose">${mdFull(L.exam)}</div></details></div>`;
+    if (notesMissing(view.t)) h += `<div class="panel" style="margin-top:14px"><span class="spin"></span> Loading the full notes…</div>`;
     const rest = (L.sections || []).filter(s => s.md && ![L.summary, L.remember, L.exam].includes(s.md));
     if (rest.length) h += `<div class="section"><div class="eyebrow">Full notes</div>${rest.map(s => `<details class="sec"><summary>${esc(s.h || "Introduction")}</summary><div class="prose">${mdFull(s.md)}</div></details>`).join("")}</div>`;
     if (L.chapter) h += `<div class="section"><details class="sec"><summary>Teacher's chapter (course website)</summary><div class="prose">${mdFull(L.chapter.replace(/\[figure: ([^\]]+)\]/g, (m, f) => { const fig = (L.figures || []).find(x => x.key.endsWith(f.toLowerCase())); return fig ? `\n\n<img data-key="${fig.key}" alt="${esc(fig.alt)}">\n\n*${esc(fig.alt)}*\n\n` : ""; }))}</div></details></div>`;
@@ -904,6 +929,7 @@ function vTestPage() {
   const g = view.g, t = testsOf(g).find(x => x.id === view.t) || testsOf(g)[0]; if (!t) return vTests();
   const cs = (BYGROUP[g] || []).filter(c => t.topics.includes(c.t)), c = counts(cs), days = t.date ? dayOf(t.date) - today() : null, files = (LIB && LIB.subjects && LIB.subjects[g] && LIB.subjects[g].files) || [];
   const hist = S.tests.filter(x => x.g === g && x.title === t.title).slice(-5);
+  needNotes(t.topics);
   let h = `<header class="band"><div class="col"><button class="back" data-act="tab" data-v="tests">‹ Tests</button><h1 style="margin-top:6px">${esc(GROUPS[g].title)} · ${esc(t.title)}</h1><div class="small" style="color:var(--band-muted);margin-top:4px">${esc(t.note || "")}${days !== null ? ` · ${days >= 0 ? days + " days left" : "done"}` : ""}</div>
   <div class="kpis"><div class="kpi"><span>Ready</span><b>${Math.round(c.m * 100)}%</b></div><div class="kpi"><span>Don't know</span><b>${c.weak}</b></div><div class="kpi"><span>Not seen</span><b>${c.fresh}</b></div></div>
   <div class="studybar"><button class="btn primary" data-act="startTest" data-g="${g}" data-t="${t.id}">Practice test · ${t.n} q ▸</button><button class="btn" data-act="studyIds" data-ids="${cs.map(x => x.id).join(",")}" data-label="${esc(GROUPS[g].title + " " + t.title)}" data-mode="srs">Study</button></div></div></header><main class="col">`;
@@ -1564,7 +1590,7 @@ async function googleFinish() {
   applyTheme();
   // Local check only: http://127.0.0.1:8091/app/web/?demo reads the built deck and library from this Mac, without signing in or syncing.
   if (/^(127\.0\.0\.1|localhost)$/.test(location.hostname) && new URLSearchParams(location.search).has("demo")) {
-    DECK = await (await fetch("/data/cards.json")).json(); LIB = await (await fetch("/data/library.json")).json();
+    DECK = await (await fetch("/data/cards.json", {cache: "no-cache"})).json(); LIB = await (await fetch("/data/library.json", {cache: "no-cache"})).json();
     S = blankState(); S.session = "demo"; S.user = {id: "demo", email: "demo@recall.test", name: "Demo"}; indexDeck(); return go({name: "learn"});
   }
   DECK = await IDB.get("deck"); LIB = await IDB.get("lib");
