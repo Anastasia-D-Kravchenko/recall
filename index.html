@@ -14,8 +14,11 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Familjen+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js"></script>
 <style>
-/* Layout: navy header bands (Brainscape-style), one 760px column on phones, sidebar + column on wide screens; study screen with a thumb-zone rating dock. */
+/* Layout: navy header bands, one 760px column on phones (sidebar on wide screens). Home = map of subjects → topics with
+   progress; topic pages with Learn / Slides / Listen / Videos / Cards / Ask; study screen with a thumb-zone rating dock. */
 :root{
   --band:#162240; --band-ink:#FFFFFF; --band-soft:#22335C; --band-muted:#AFC0E2;
   --paper:#EEF1F6; --card:#FFFFFF; --ink:#15203A; --muted:#5A6479; --line:#D9DFEA; --soft:#E5EAF2;
@@ -48,90 +51,139 @@ button{cursor:pointer}
 #app{min-height:100%;display:flex;flex-direction:column}
 .col{width:100%;max-width:760px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
 h1,h2,h3{font-family:var(--display);line-height:1.15;margin:0;text-wrap:balance}
-h1{font-size:1.7rem;font-weight:700} h2{font-size:1.2rem;font-weight:700} h3{font-size:1rem;font-weight:600}
+h1{font-size:1.6rem;font-weight:700} h2{font-size:1.2rem;font-weight:700} h3{font-size:1rem;font-weight:600}
 .eyebrow{font:700 .72rem/1 var(--body);letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
 .muted{color:var(--muted)} .small{font-size:.86rem} .num{font-variant-numeric:tabular-nums}
 .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap} .between{justify-content:space-between} .grow{flex:1;min-width:0}
 .stack{display:flex;flex-direction:column;gap:12px}
 .panel{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px}
 .section{display:flex;flex-direction:column;gap:10px;margin-top:22px}
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:48px;padding:0 18px;border-radius:999px;border:1.5px solid var(--line);background:var(--card);font-weight:700;text-decoration:none;color:inherit}
-.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);letter-spacing:.06em;text-transform:uppercase}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:46px;padding:0 18px;border-radius:999px;border:1.5px solid var(--line);background:var(--card);font-weight:700;text-decoration:none;color:inherit}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);letter-spacing:.05em;text-transform:uppercase}
 .btn.ghost{background:transparent;border-color:transparent}
-.btn.block{width:100%} .btn.sm{min-height:38px;padding:0 14px;font-size:.88rem}
+.btn.block{width:100%} .btn.sm{min-height:36px;padding:0 13px;font-size:.86rem}
 .btn:disabled{opacity:.45;cursor:default}
-.icon-btn{width:44px;height:44px;border-radius:12px;border:1px solid var(--line);background:var(--card);display:inline-grid;place-items:center;font-size:1.05rem;flex:none}
+.icon-btn{width:44px;height:44px;border-radius:12px;border:1px solid var(--line);background:var(--card);display:inline-grid;place-items:center;font-size:1.05rem;flex:none;color:inherit;text-decoration:none}
 .chip{font:600 .72rem/1 var(--mono);padding:4px 6px;border-radius:6px;background:var(--soft);color:var(--muted);white-space:nowrap}
-.pill{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:999px;background:var(--soft);font-size:.78rem;font-weight:700;white-space:nowrap}
-.pill.over{background:color-mix(in srgb,var(--c1) 16%,transparent);color:var(--c1)}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:999px;background:var(--soft);font-size:.76rem;font-weight:700;white-space:nowrap;border:0}
 .pill.exam{background:color-mix(in srgb,var(--c1) 18%,transparent);color:var(--c1)}
 .pill.active{background:var(--accent-soft);color:var(--accent)}
 .pill.maintain{background:var(--soft);color:var(--muted)}
 .pill.paused{background:transparent;border:1px dashed var(--line);color:var(--muted)}
 .pill.ok{background:color-mix(in srgb,var(--ok) 16%,transparent);color:var(--ok)}
 .pill.warn{background:color-mix(in srgb,var(--warn) 18%,transparent);color:var(--warn)}
+.pill.bad{background:color-mix(in srgb,var(--bad) 14%,transparent);color:var(--bad)}
 .cbar{display:flex;height:8px;border-radius:99px;overflow:hidden;background:var(--c0)} .cbar i{display:block;height:100%}
 .band{background:var(--band);color:var(--band-ink);padding-top:env(safe-area-inset-top,0px)}
-.band .col{padding-block:14px 18px}
+.band .col{padding-block:12px 18px}
 .bandtop{display:flex;align-items:center;justify-content:space-between;gap:10px}
 .brand{display:flex;align-items:center;gap:10px;font:700 1.05rem var(--display)} .brand img{width:30px;height:30px;border-radius:8px}
 .sync{font-size:.75rem;color:var(--band-muted);display:flex;align-items:center;gap:6px;background:none;border:0;padding:6px}
 .sync i{width:8px;height:8px;border-radius:50%;background:var(--band-muted)}
 .sync[data-s="synced"] i{background:#5CC484} .sync[data-s="syncing"] i{background:#E9BC22} .sync[data-s="error"] i,.sync[data-s="offline"] i{background:#F07067}
 .band .icon-btn{background:var(--band-soft);border-color:transparent;color:var(--band-ink)}
-.hello{font:700 1.55rem/1.15 var(--display);margin-top:12px}
-.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}
+.band .btn:not(.primary){background:var(--band-soft);color:#fff;border-color:transparent}
+.hello{font:700 1.45rem/1.15 var(--display);margin-top:10px}
+.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}
 .kpi span{display:block;font-size:.66rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--band-muted)}
-.kpi b{font:700 1.45rem/1.1 var(--display);font-variant-numeric:tabular-nums}
-.studybar{display:flex;gap:10px;align-items:center;margin-top:16px} .studybar .btn.primary{flex:1;min-height:52px}
+.kpi b{font:700 1.3rem/1.1 var(--display);font-variant-numeric:tabular-nums}
+.studybar{display:flex;gap:10px;align-items:center;margin-top:14px} .studybar .btn.primary{flex:1;min-height:50px}
 .back{color:var(--band-muted);background:none;border:0;padding:0;font-weight:700;min-height:36px}
 .tabs{position:fixed;left:0;right:0;bottom:0;z-index:8;background:var(--card);border-top:1px solid var(--line);padding:0 env(safe-area-inset-right,0px) env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px)}
 .tabs nav{max-width:760px;margin:0 auto;display:grid;grid-template-columns:repeat(4,1fr)}
-.tabs button{border:0;background:none;min-height:60px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:.74rem;font-weight:700;color:var(--muted)}
+.tabs button{border:0;background:none;min-height:58px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:.74rem;font-weight:700;color:var(--muted)}
 .tabs button[aria-current="page"]{color:var(--accent)} .tabs svg{width:22px;height:22px}
-main.col{padding-block:6px 110px}
-.subtabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-top:14px;overflow-x:auto}
-.subtabs button{flex:1;border:0;background:none;min-height:44px;font-weight:700;color:var(--muted);border-bottom:3px solid transparent;white-space:nowrap;padding:0 10px}
+main.col{padding-block:6px 120px}
+.subtabs{display:flex;gap:2px;border-bottom:1px solid var(--line);margin-top:12px;overflow-x:auto;scrollbar-width:none}
+.subtabs button{flex:1 0 auto;border:0;background:none;min-height:44px;font-weight:700;color:var(--muted);border-bottom:3px solid transparent;white-space:nowrap;padding:0 12px}
 .subtabs button[aria-pressed="true"]{color:var(--ink);border-bottom-color:var(--accent)}
-.subj{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;width:100%;text-align:left;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px}
-.code{font:700 .9rem var(--mono);width:50px;height:50px;border-radius:12px;display:grid;place-items:center;background:var(--tile);color:#fff;flex:none}
+.code{font:700 .86rem var(--mono);width:46px;height:46px;border-radius:12px;display:grid;place-items:center;background:var(--tile);color:#fff;flex:none}
 .right{text-align:right;font-size:.8rem;line-height:1.3} .right b{font-size:1rem;font-variant-numeric:tabular-nums}
-.testcard{display:flex;gap:12px;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:12px 14px}
-.days{min-width:58px;text-align:center;border-radius:12px;background:var(--accent-soft);color:var(--accent);padding:6px 4px}
-.days b{display:block;font:700 1.35rem/1 var(--display)} .days span{font-size:.66rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
-.topic{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;padding:12px 2px;border-top:1px solid var(--line)}
-.topic:first-child{border-top:0}
-.check{width:26px;height:26px;accent-color:var(--accent)}
-.topic label{display:flex;flex-direction:column;gap:6px;min-width:0;cursor:pointer}
-.tbtn{border:0;background:none;color:var(--accent);font-weight:700;min-height:40px;padding:0 6px;text-decoration:none}
+/* home: subject blocks with topic rows */
+.subject{background:var(--card);border:1px solid var(--line);border-radius:18px;overflow:hidden}
+.subject header{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;padding:14px 12px 10px 14px}
+.trow{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;width:100%;text-align:left;padding:10px 14px;border:0;border-top:1px solid var(--line);background:none}
+.trow:hover{background:var(--soft)}
+.trow .tt{display:flex;flex-direction:column;gap:5px;min-width:0}
+.trow .tt b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.trow .pct{font:700 .95rem var(--display);font-variant-numeric:tabular-nums;min-width:44px;text-align:right}
+.trow.sel{background:var(--accent-soft)}
+.trow input{width:22px;height:22px;accent-color:var(--accent)}
+.tags{display:flex;gap:6px;flex-wrap:wrap;font-size:.74rem;font-weight:700}
+.tags span{white-space:nowrap}
+.t-bad{color:var(--c1)} .t-over{color:var(--warn)} .t-new{color:var(--muted)}
+.sfoot{display:flex;gap:8px;padding:10px 12px 12px;border-top:1px solid var(--line);flex-wrap:wrap}
+.combine{position:fixed;left:0;right:0;bottom:calc(58px + env(safe-area-inset-bottom,0px));z-index:9;background:var(--band);color:#fff;padding:10px max(16px,env(safe-area-inset-right,0px)) 10px max(16px,env(safe-area-inset-left,0px))}
+.combine .col{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:0}
+.combine .btn{min-height:40px;background:var(--band-soft);color:#fff;border-color:transparent}
+.combine .btn.primary{background:var(--accent);color:var(--accent-ink)}
+.weak{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px}
+.weak button{text-align:left;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:10px 12px;display:flex;flex-direction:column;gap:4px}
+.weak b{font-variant-numeric:tabular-nums}
+.testcard{display:flex;gap:12px;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:12px 14px;width:100%;text-align:left}
+.days{min-width:56px;text-align:center;border-radius:12px;background:var(--accent-soft);color:var(--accent);padding:6px 4px}
+.days b{display:block;font:700 1.3rem/1 var(--display)} .days span{font-size:.64rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
 .seg{display:inline-flex;border:1px solid var(--line);border-radius:999px;overflow:hidden;background:var(--card)}
 .seg button{border:0;background:none;min-height:36px;padding:0 14px;font-weight:700;font-size:.86rem}
 .seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
 .seg.full{display:flex} .seg.full button{flex:1;min-height:44px}
 .ring{position:relative;display:grid;place-items:center} .ring svg{display:block}
-.ring .lbl{position:absolute;text-align:center} .ring .lbl b{display:block;font:700 2rem/1 var(--display);font-variant-numeric:tabular-nums}
+.ring .lbl{position:absolute;text-align:center} .ring .lbl b{display:block;font:700 1.9rem/1 var(--display);font-variant-numeric:tabular-nums}
 .ring .lbl span{font-size:.7rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
-.statrow{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:13px 2px;border-top:1px solid var(--line)}
-.statrow b{font-variant-numeric:tabular-nums;font-size:1.02rem;text-align:right}
-.plan{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;width:100%;text-align:left;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:10px 12px}
+.statrow{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 2px;border-top:1px solid var(--line)}
+.statrow b{font-variant-numeric:tabular-nums;font-size:1rem;text-align:right}
 .heat{display:grid;grid-template-columns:repeat(12,1fr);grid-auto-flow:column;grid-template-rows:repeat(7,1fr);gap:3px}
 .heat i{display:block;aspect-ratio:1;border-radius:3px;background:var(--soft)}
 .goal{display:flex;align-items:center;gap:8px}
 .goal .gbar{flex:1;height:8px;border-radius:9px;background:var(--band-soft);overflow:hidden} .goal .gbar i{display:block;height:100%;background:#5CC484}
+/* reading */
+.prose{line-height:1.6;overflow-wrap:anywhere;font-size:calc(1rem * var(--fs))}
+.prose h1,.prose h2,.prose h3,.prose h4{margin:1.1em 0 .4em} .prose h2{font-size:1.15rem} .prose h3{font-size:1.02rem}
+.prose p{margin:.5em 0} .prose ul,.prose ol{padding-left:1.3em;margin:.4em 0}
+.prose blockquote{margin:.8em 0;padding:10px 14px;border-left:4px solid var(--accent);background:var(--soft);border-radius:0 10px 10px 0}
+.prose pre{background:var(--soft);padding:10px 12px;border-radius:10px;overflow-x:auto;font:.86rem/1.5 var(--mono)}
+.prose code{font:.88em var(--mono);background:var(--soft);padding:1px 5px;border-radius:5px}
+.prose pre code{background:none;padding:0}
+.prose table{border-collapse:collapse;display:block;overflow-x:auto;font-size:.9rem;margin:.6em 0}
+.prose th,.prose td{border:1px solid var(--line);padding:6px 8px;text-align:left;vertical-align:top}
+.prose img{max-width:100%;border-radius:10px}
+.prose a{color:var(--accent)}
+.prose .mermaid{background:var(--card);border-radius:10px;padding:8px;overflow-x:auto;text-align:left} .prose .mermaid svg{max-width:none!important;height:auto}
+details.sec{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:0 14px}
+details.sec>summary{cursor:pointer;list-style:none;padding:13px 0;font-weight:700;display:flex;justify-content:space-between;gap:10px}
+details.sec>summary::after{content:"▾";color:var(--muted)} details.sec[open]>summary::after{content:"▴"}
+details.sec[open]{padding-bottom:12px}
+.slides{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.slides button{border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--card);padding:0;position:relative;aspect-ratio:4/3}
+.slides img{width:100%;height:100%;object-fit:cover;display:block}
+.slides span{position:absolute;left:6px;bottom:6px;background:rgba(0,0,0,.6);color:#fff;font:600 .7rem var(--mono);padding:2px 6px;border-radius:6px}
+.vid{display:grid;grid-template-columns:132px 1fr;gap:12px;align-items:start;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:10px;text-decoration:none;color:inherit}
+.vid img{width:132px;aspect-ratio:16/9;object-fit:cover;border-radius:8px;background:var(--soft)}
+.viewer{position:fixed;inset:0;z-index:40;background:rgba(6,10,22,.94);display:flex;flex-direction:column;padding:calc(10px + env(safe-area-inset-top,0px)) max(12px,env(safe-area-inset-right,0px)) calc(12px + env(safe-area-inset-bottom,0px)) max(12px,env(safe-area-inset-left,0px));color:#fff}
+.viewer .stage{flex:1;display:grid;place-items:center;min-height:0;touch-action:pan-y}
+.viewer img{max-width:100%;max-height:100%;object-fit:contain;border-radius:8px;background:#fff}
+.viewer .vbar{display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.viewer .icon-btn{background:#ffffff1f;border-color:transparent;color:#fff}
 /* study */
 .study{flex:1;display:flex;flex-direction:column;width:100%;max-width:760px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-top:env(safe-area-inset-top,0px)}
 .shead{position:sticky;top:env(safe-area-inset-top,0px);z-index:4;background:var(--paper);display:flex;align-items:center;gap:8px;padding-block:10px}
 .prog{flex:1;height:6px;border-radius:9px;background:var(--soft);overflow:hidden} .prog i{display:block;height:100%;background:var(--accent);transition:width .25s}
 .face{background:var(--card);border:1px solid var(--line);border-radius:18px;box-shadow:0 10px 30px -18px rgba(10,20,50,.45);overflow:hidden;margin-top:4px}
-.face .meta{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:12px 14px 0 18px;font-size:.78rem;color:var(--muted)}
-.face .q{padding:14px 18px 16px;border-bottom:2px solid var(--rule);font-size:calc(1.16rem * var(--fs));line-height:1.45;font-weight:700}
-.face .a{padding:14px 18px 18px;background-image:repeating-linear-gradient(transparent 0 31px,var(--soft) 31px 32px);background-position:0 12px;line-height:2rem;font-size:calc(1.04rem * var(--fs));overflow-wrap:anywhere}
-.face .a.hidden{display:grid;place-items:center;min-height:150px;color:var(--muted);background:none;line-height:1.4;text-align:center;cursor:pointer}
+.face .meta{display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding:10px 10px 0 18px;font-size:.78rem;color:var(--muted)}
+.face .q{padding:12px 18px 14px;border-bottom:2px solid var(--rule);font-size:calc(1.16rem * var(--fs));line-height:1.45;font-weight:700}
+.face .a{padding:14px 18px 18px;line-height:1.75;font-size:calc(1.04rem * var(--fs));overflow-wrap:anywhere}
+.face .a.hidden{display:grid;place-items:center;min-height:130px;color:var(--muted);line-height:1.4;text-align:center;cursor:pointer}
 .recall{font:700 .72rem var(--mono);padding:3px 7px;border-radius:999px;border:1.5px solid currentColor}
-.star{border:0;background:none;font-size:1.2rem;color:var(--muted);min-width:40px;min-height:40px}
+.star{border:0;background:none;font-size:1.15rem;color:var(--muted);min-width:38px;min-height:38px}
 .star[aria-pressed="true"]{color:#E9BC22}
-.xpl{margin-top:12px;padding:12px 14px;border-radius:12px;background:var(--soft);line-height:1.5;font-size:calc(.97rem * var(--fs))}
+.helpers{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.helpers .btn{min-height:38px;font-size:.88rem;padding:0 14px}
+.xpl{margin-top:12px;padding:12px 14px;border-radius:12px;background:var(--soft);line-height:1.55;font-size:calc(.97rem * var(--fs))}
 .xpl .eyebrow{display:block;margin-bottom:6px}
+.xpl.ai{background:color-mix(in srgb,var(--accent) 10%,var(--card));border:1px solid color-mix(in srgb,var(--accent) 30%,transparent)}
+.slidebox{margin-top:12px;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#fff;cursor:zoom-in;display:block;width:100%;padding:0}
+.slidebox img{display:block;width:100%}
+.slidebox span{display:block;background:var(--card);color:var(--muted);font-size:.8rem;padding:6px 10px;text-align:left}
 .note{display:flex;align-items:center;gap:8px;margin-top:10px;padding:10px 14px;border-radius:12px;border:1px dashed var(--line);color:var(--ink);text-decoration:none;font-size:.92rem}
 .verdict{display:flex;align-items:center;gap:8px;font-weight:700;padding:10px 14px;border-radius:12px;margin-top:12px}
 .verdict.ok{background:color-mix(in srgb,var(--ok) 16%,transparent);color:var(--ok)}
@@ -142,14 +194,14 @@ main.col{padding-block:6px 110px}
 .ask{text-align:center;font-weight:700;font-size:.9rem;margin-bottom:8px}
 .rate{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;justify-items:center}
 .rate div{display:flex;flex-direction:column;align-items:center;gap:4px}
-.rate button{width:min(64px,16vw);aspect-ratio:1;border-radius:50%;border:0;color:#fff;font:700 1.35rem var(--display);box-shadow:0 4px 0 rgba(0,0,0,.12)}
+.rate button{width:min(62px,16vw);aspect-ratio:1;border-radius:50%;border:0;color:#fff;font:700 1.35rem var(--display);box-shadow:0 4px 0 rgba(0,0,0,.12)}
 .rate button:active{transform:translateY(2px);box-shadow:none}
 .rate small{font:600 .7rem var(--mono);color:var(--muted)}
 .rate .r1{background:var(--c1)}.rate .r2{background:var(--c2)}.rate .r3{background:var(--c3)}.rate .r4{background:var(--c4)}.rate .r5{background:var(--c5)}
 .ratelbl{display:flex;justify-content:space-between;font-size:.72rem;color:var(--muted);margin-top:4px;padding:0 4px}
 .tf{display:grid;grid-template-columns:1fr 1fr;gap:10px} .tf .btn{min-height:56px;border-radius:14px}
 .answerbox{width:100%;min-height:72px;margin-top:12px;border-radius:12px;border:1px solid var(--line);background:var(--card);padding:10px 12px;resize:vertical}
-.opt{display:block;width:100%;text-align:left;min-height:56px;padding:12px 14px;border-radius:14px;border:1.5px solid var(--line);background:var(--card);line-height:1.4}
+.opt{display:block;width:100%;text-align:left;min-height:54px;padding:12px 14px;border-radius:14px;border:1.5px solid var(--line);background:var(--card);line-height:1.4}
 .opt.sel{border-color:var(--accent);background:var(--accent-soft)}
 .opt.right{border-color:var(--ok);background:color-mix(in srgb,var(--ok) 14%,var(--card))}
 .opt.wrong{border-color:var(--bad);background:color-mix(in srgb,var(--bad) 12%,var(--card))}
@@ -166,10 +218,15 @@ main.col{padding-block:6px 110px}
 mark{background:var(--mark);color:inherit;border-radius:3px;padding:0 1px}
 code{font:.9em var(--mono);background:var(--soft);padding:1px 5px;border-radius:5px;overflow-wrap:anywhere}
 .scrim{position:fixed;inset:0;background:rgba(6,10,22,.5);z-index:20;display:flex;align-items:flex-end;justify-content:center}
-.sheet{background:var(--paper);width:100%;max-width:760px;max-height:90%;overflow:auto;border-radius:22px 22px 0 0;padding:18px max(16px,env(safe-area-inset-right,0px)) calc(18px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+.sheet{background:var(--paper);width:100%;max-width:760px;max-height:92%;overflow:auto;border-radius:22px 22px 0 0;padding:18px max(16px,env(safe-area-inset-right,0px)) calc(18px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+.menu{display:flex;flex-direction:column;background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.menu button{border:0;border-top:1px solid var(--line);background:none;text-align:left;padding:14px 16px;font-weight:700;display:flex;gap:12px;align-items:center}
+.menu button:first-child{border-top:0}
+.menu button small{font-weight:400;color:var(--muted);display:block}
+.menu button.danger{color:var(--bad)}
 .field{display:flex;flex-direction:column;gap:6px}
 .field label{font-weight:700;font-size:.9rem}
-.field textarea,.field input,.field select{border:1.5px solid var(--line);border-radius:12px;background:var(--card);padding:10px 12px;min-height:48px}
+.field textarea,.field input,.field select{border:1.5px solid var(--line);border-radius:12px;background:var(--card);padding:10px 12px;min-height:46px}
 .field textarea{min-height:90px;resize:vertical}
 .slider{display:grid;grid-template-columns:60px 1fr 44px;gap:10px;align-items:center} .slider input{width:100%;accent-color:var(--accent)}
 .levels{display:flex;gap:8px;flex-wrap:wrap}
@@ -188,10 +245,21 @@ td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
 .toggle{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0;border-top:1px solid var(--line)}
 .toggle:first-child{border-top:0}
 .toggle input[type=checkbox]{width:26px;height:26px;accent-color:var(--accent);flex:none}
-.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(84px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--paper);padding:10px 16px;border-radius:12px;z-index:30;font-weight:700;max-width:90%}
+.toggle select,.toggle input[type=number]{border:1.5px solid var(--line);border-radius:10px;background:var(--card);padding:8px 10px;max-width:55%}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(84px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--paper);padding:10px 16px;border-radius:12px;z-index:50;font-weight:700;max-width:90%}
+.player{position:fixed;left:0;right:0;bottom:calc(58px + env(safe-area-inset-bottom,0px));z-index:9;background:var(--card);border-top:1px solid var(--line);box-shadow:0 -8px 24px -16px rgba(0,0,0,.4)}
+.player .col{display:flex;gap:8px;align-items:center;padding-block:8px}
+.player .icon-btn{width:40px;height:40px}
+.player .t{flex:1;min-width:0;font-size:.85rem} .player .t b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chat{display:flex;flex-direction:column;gap:10px}
+.msg{padding:10px 14px;border-radius:14px;max-width:92%}
+.msg.me{align-self:flex-end;background:var(--accent);color:var(--accent-ink)}
+.msg.ai{align-self:flex-start;background:var(--card);border:1px solid var(--line)}
 .login{flex:1;display:flex;flex-direction:column;justify-content:center;gap:16px;max-width:420px;margin:0 auto;width:100%;padding:24px max(16px,env(safe-area-inset-right,0px)) 24px max(16px,env(safe-area-inset-left,0px))}
 .login .logo{width:76px;height:76px;border-radius:18px}
 .err{color:var(--bad);font-weight:700;font-size:.9rem}
+.spin{display:inline-block;width:16px;height:16px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:sp .8s linear infinite;vertical-align:-3px}
+@keyframes sp{to{transform:rotate(360deg)}}
 @media (min-width:1000px){
   .tabs{top:0;bottom:0;right:auto;width:200px;border-top:0;border-right:1px solid var(--line);padding:calc(16px + env(safe-area-inset-top,0px)) 10px 16px}
   .tabs nav{display:flex;flex-direction:column;gap:4px}
@@ -199,12 +267,14 @@ td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
   .tabs button[aria-current="page"]{background:var(--accent-soft)}
   #app.withtabs{padding-left:200px}
   main.col{padding-bottom:40px}
+  .combine,.player{left:200px;bottom:0}
 }
-@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
 </head>
 <body>
 <div id="app"></div>
+<div id="dock2"></div>
 <div id="layer"></div>
 <script>
 (() => {
@@ -222,15 +292,31 @@ const dayStartMs = d => d * DAY + new Date().getTimezoneOffset() * MIN + 4 * HOU
 const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, ch => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[ch]));
 const fold = s => String(s || "").toLowerCase().normalize("NFKD").replace(/[̀-ͯ]/g, "");
 const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
-const plural = (n, w) => n + " " + w + (n === 1 ? "" : "s");
+const plural = (n, w, pl) => n + " " + (n === 1 ? w : (pl || w + "s"));
 const fmtTime = s => { s = Math.max(0, Math.round(s)); return Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0"); };
 const fmtDur = s => { s = Math.round(s); if (s < 60) return s + " s"; const m = Math.round(s / 60); if (m < 60) return m + " min"; const h = Math.floor(m / 60); return h + " h " + (m % 60) + " min"; };
 const fmtGap = m => m < 60 ? Math.max(1, Math.round(m)) + " min" : m < 1440 ? (Math.round(m / 6) / 10) + " h" : m < 1440 * 60 ? Math.round(m / 1440) + " days" : Math.round(m / 43200) + " mo";
 const fmtDate = d => new Date(d * DAY).toLocaleDateString("en-GB", {day: "numeric", month: "short", timeZone: "UTC"});
+// small, safe markdown for card text and AI answers (escapes everything first)
 function md(s, hl) {
   let h = esc(s).replace(/`([^`]+)`/g, "<code>$1</code>").replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>").replace(/\n/g, "<br>");
   for (const w of hl || []) { if (w.length < 2) continue; h = h.replace(new RegExp("(" + w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + ")(?![^<]*>)", "gi"), "<mark>$1</mark>"); }
   return h;
+}
+// full markdown for notes (her vault) and longer AI answers: marked + DOMPurify, mermaid diagrams rendered lazily
+function mdFull(s) {
+  if (!window.marked || !window.DOMPurify) return "<p>" + md(s) + "</p>";
+  const src = String(s || "").replace(/```mermaid\n([\s\S]*?)```/g, (_, g) => `<pre class="mermaid">${esc(g)}</pre>`);
+  return DOMPurify.sanitize(marked.parse(src, {gfm: true, breaks: false}), {ADD_TAGS: ["details", "summary"]});
+}
+let mermaidLoading = null;
+function drawMermaid(root) {
+  const blocks = (root || document).querySelectorAll("pre.mermaid:not([data-done])");
+  if (!blocks.length) return;
+  const go = () => { try { window.mermaid.initialize({startOnLoad: false, theme: matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "neutral", flowchart: {useMaxWidth: false}, sequence: {useMaxWidth: false}}); window.mermaid.run({nodes: [...blocks]}); blocks.forEach(b => b.dataset.done = 1); } catch (e) {} };
+  if (window.mermaid) return go();
+  if (!mermaidLoading) mermaidLoading = new Promise(res => { const s = document.createElement("script"); s.src = "https://cdnjs.cloudflare.com/ajax/libs/mermaid/10.9.1/mermaid.min.js"; s.onload = res; s.onerror = res; document.head.appendChild(s); });
+  mermaidLoading.then(() => window.mermaid && go());
 }
 
 // ================================================================ local storage
@@ -240,11 +326,14 @@ const IDB = (() => {
   const tx = async (mode, fn) => { const db = await open(); return new Promise((res, rej) => { const t = db.transaction("kv", mode); const r = fn(t.objectStore("kv")); t.oncomplete = () => res(r && r.result); t.onerror = () => rej(t.error); }); };
   return {get: k => tx("readonly", s => s.get(k)).catch(() => undefined), set: (k, v) => tx("readwrite", s => s.put(v, k)).catch(() => {}), del: k => tx("readwrite", s => s.delete(k)).catch(() => {})};
 })();
-let dev = "w" + Math.random().toString(36).slice(2, 8);
-try { const d = localStorage.getItem("recall.dev"); if (d) dev = d; else localStorage.setItem("recall.dev", dev); } catch (e) {}
+const LS = {get: k => { try { return JSON.parse(localStorage.getItem("recall." + k)); } catch (e) { return null; } }, set: (k, v) => { try { localStorage.setItem("recall." + k, JSON.stringify(v)); } catch (e) {} }};
+let dev = LS.get("dev") || "w" + Math.random().toString(36).slice(2, 8); LS.set("dev", dev);
 
 // ================================================================ state
-const DEFAULT_SETTINGS = {goal: 25, newPerDay: 20, round: 10, retention: 0.9, preset: "smart", custom: [7, 30, 90, 1440, 86400], typeAnswer: false, planner: true, qstyle: "auto", font: 0, reverse: false, order: {}, mix: {}, status: {}, tests: {}, u: 0};
+// Keys must match the iPhone app's Settings so neither side drops the other's values.
+const DEFAULT_SETTINGS = {goal: 25, newPerDay: 20, round: 10, retention: 0.9, preset: "smart", custom: [7, 30, 90, 1440, 86400], typeAnswer: false, planner: true,
+  qstyle: "auto", font: 0, reverse: false, order: {}, mix: {}, status: {}, tests: {}, reminder: "19:00",
+  maxIvl: 365, leech: 6, plannerDays: 3, reviewCap: 0, interleave: true, autoX: true, autoRead: false, voice: "", rate: 1, aiLang: "English", aiHint: true, hidden: {}, theme: "auto", u: 0};
 const PRESETS = {
   smart: {label: "Smart", hint: "1–3 come back in minutes; 4–5 are spaced by your memory model (FSRS)", m: [7, 30, 90, null, null]},
   cram: {label: "Cram", hint: "everything comes back fast — a test is soon", m: [1, 5, 30, 240, 1440]},
@@ -252,18 +341,22 @@ const PRESETS = {
   custom: {label: "Custom", hint: "your own gaps", m: null},
 };
 const STATUS = {exam: "Exam soon", active: "Active", maintain: "Maintaining", paused: "Paused"};
+const STATUS_HINT = {exam: "most of the mix; the exam planner raises new cards", active: "normal daily study", maintain: "few new cards, keeps old ones fresh", paused: "hidden from Learn and the mix"};
 const blankState = () => ({session: null, user: null, cursor: "", progress: {}, meta: {settings: Object.assign({}, DEFAULT_SETTINGS), days: {}, edits: {}, custom: {}, bm: {}}, tests: [], dirty: [], metaDirty: false, testsDirty: []});
 let S = blankState();
-let DECK = null;
+let DECK = null, LIB = null;
 const settings = () => S.meta.settings;
 let saveT = 0;
 function persist() { clearTimeout(saveT); saveT = setTimeout(() => IDB.set("state", S), 300); }
+function applyTheme() { const t = settings().theme; if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; else delete document.documentElement.dataset.theme; }
 
 // ================================================================ login relay + Neon Data API
 let JWT = null, JWT_EXP = 0;
 const jwtExp = t => { try { return JSON.parse(atob(t.split(".")[1].replace(/-/g, "+").replace(/_/g, "/"))).exp * 1000; } catch (e) { return 0; } };
-async function relay(path, body) {
-  const r = await fetch(RELAY + path, {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body)});
+async function relay(path, body, auth) {
+  const h = {"Content-Type": "application/json"};
+  if (auth) h.Authorization = "Bearer " + await token();
+  const r = await fetch(RELAY + path, {method: "POST", headers: h, body: JSON.stringify(body)});
   const d = await r.json().catch(() => ({}));
   if (!r.ok) { const e = new Error(d.error || r.statusText); e.status = r.status; throw e; }
   return d;
@@ -287,6 +380,29 @@ async function rest(method, path, body, prefer, retried) {
 }
 const UPSERT = "resolution=merge-duplicates,return=minimal";
 
+// private files (lecture PDFs, slides, figures): short-lived links from the relay, cached a little under their lifetime
+const URLS = new Map();
+async function fileUrls(keys) {
+  const t = now(), need = [...new Set(keys)].filter(k => !(URLS.get(k) && URLS.get(k).until > t));
+  for (let i = 0; i < need.length; i += 120) {
+    const d = await relay("/files", {keys: need.slice(i, i + 120)}, true);
+    for (const [k, u] of Object.entries(d.urls || {})) URLS.set(k, {url: u, until: t + 25 * MIN});
+  }
+  const out = {}; for (const k of keys) if (URLS.get(k)) out[k] = URLS.get(k).url; return out;
+}
+async function fillImages(root) {
+  if (S.session === "demo") return;
+  const imgs = [...(root || document).querySelectorAll("img[data-key]")];
+  if (!imgs.length) return;
+  try { const u = await fileUrls(imgs.map(i => i.dataset.key)); imgs.forEach(i => { if (u[i.dataset.key]) { i.src = u[i.dataset.key]; i.removeAttribute("data-key"); } }); }
+  catch (e) { toast("Couldn't load pictures — " + e.message); }
+}
+async function openFile(key, page) {
+  const w = window.open("", "_blank");
+  try { const u = (await fileUrls([key]))[key]; const url = u + (page ? "#page=" + page : ""); if (w) w.location = url; else location.href = url; }
+  catch (e) { if (w) w.close(); toast("Couldn't open the file — " + e.message); }
+}
+
 // ================================================================ sync
 let syncState = "offline", syncT = 0, syncing = false, lastSync = 0;
 const SYNC_TXT = {synced: "Synced", syncing: "Syncing…", error: "Sync failed — saved here", offline: "Offline — saved here"};
@@ -304,21 +420,25 @@ function mergeMeta(r) {
     for (const k in m[part]) if (!(k in rem)) localNewer = true; }
   return localNewer;
 }
-async function loadDeck() {
-  const head = await rest("GET", "/content?select=version&id=eq.1");
+async function loadContent() {
+  const head = await rest("GET", "/content?select=id,version&id=in.(1,2)");
   if (!head.length) return false;
-  if (!DECK || DECK.version !== head[0].version) { const full = await rest("GET", "/content?select=data&id=eq.1"); DECK = full[0].data; await IDB.set("deck", DECK); indexDeck(); }
+  const want = head.filter(h => (h.id === 1 && (!DECK || DECK.version !== h.version)) || (h.id === 2 && (!LIB || LIB.version !== h.version))).map(h => h.id);
+  if (want.length) {
+    const rows = await rest("GET", `/content?select=id,data&id=in.(${want.join(",")})`);
+    for (const r of rows) { if (r.id === 1) { DECK = r.data; await IDB.set("deck", DECK); } else { LIB = r.data; await IDB.set("lib", LIB); } }
+    indexDeck();
+  }
   return true;
 }
 async function sync() {
-  if (!S.session || syncing) return;
+  if (!S.session || syncing || S.session === "demo") return;
   if (navigator.onLine === false) return setSync("offline");
   syncing = true; setSync("syncing");
   try {
-    let ok = await loadDeck();
-    if (!ok) { await new Promise(r => setTimeout(r, 2000)); ok = await loadDeck(); }   // brand-new accounts need a moment
+    let ok = await loadContent();
+    if (!ok) { await new Promise(r => setTimeout(r, 2000)); ok = await loadContent(); }   // brand-new accounts need a moment
     if (!ok && !DECK) { const e = new Error("not allowed"); e.status = 403; throw e; }
-    // pull progress changed since the cursor (server time)
     let off = 0, maxU = S.cursor;
     for (;;) {
       const f = S.cursor ? "&updated_at=gte." + encodeURIComponent(S.cursor) : "";
@@ -327,24 +447,21 @@ async function sync() {
       if (r.length < 1000) break; off += 1000;
     }
     S.cursor = maxU;
-    // push local changes
     const ids = S.dirty.slice();
     for (let i = 0; i < ids.length; i += 500) {
       const rows = ids.slice(i, i + 500).map(id => ({card: id, s: S.progress[id] || {gone: 1, u: now(), d: 8.64e15, c: 0}}));
       await rest("POST", "/progress?on_conflict=user_id,card", rows, UPSERT);
     }
     S.dirty = S.dirty.filter(x => !ids.includes(x));
-    // meta
     const mr = await rest("GET", "/meta?select=data");
     const newer = mr.length ? mergeMeta(mr[0].data || {}) : true;
     if (newer || S.metaDirty) await rest("POST", "/meta?on_conflict=user_id", [{data: S.meta}], UPSERT);
     S.metaDirty = false;
-    // tests
     const tr = await rest("GET", "/tests?select=data&order=created_at.desc&limit=300");
     const have = new Set(S.tests.map(t => t.id)); tr.forEach(it => { if (!have.has(it.data.id)) S.tests.push(it.data); });
     S.tests.sort((a, b) => a.ts - b.ts);
     if (S.testsDirty.length) { const todo = S.tests.filter(t => S.testsDirty.includes(t.id)); await rest("POST", "/tests?on_conflict=user_id,id", todo.map(t => ({id: t.id, data: t})), UPSERT); S.testsDirty = []; }
-    indexDeck(); persist(); setSync("synced"); lastSync = now();
+    indexDeck(); applyTheme(); persist(); setSync("synced"); lastSync = now();
     if (!busy()) render();
   } catch (e) {
     if (e.status === 401) { toast("Signed out — please sign in again"); S = blankState(); persist(); go({name: "login"}); }
@@ -371,6 +488,8 @@ function indexDeck() {
 }
 const statusOf = g => settings().status[g] || (GROUPS[g] && GROUPS[g].status) || "active";
 const testsOf = g => settings().tests[g] || (GROUPS[g] ? GROUPS[g].tests : []);
+const hiddenTopic = t => !!(settings().hidden || {})[t];
+const studyCards = list => list.filter(c => !hiddenTopic(c.t));
 function topicCode(tid) {
   const T = TOPICS[tid]; if (!T || !T.lec || !T.lec.length) return "";
   if (T.g === "grk") { const a = T.lec[0], b = T.lec[T.lec.length - 1]; return a === b ? "L" + a : "L" + a + "–" + b; }
@@ -379,6 +498,8 @@ function topicCode(tid) {
   return "";
 }
 const noteUrl = tid => TOPICS[tid] && TOPICS[tid].note ? "obsidian://open?vault=" + encodeURIComponent(VAULT) + "&file=" + encodeURIComponent(TOPICS[tid].note) : null;
+const libTopic = tid => (LIB && LIB.topics && LIB.topics[tid]) || {};
+const cardLink = id => (LIB && LIB.links && LIB.links[id]) || null;
 
 // ================================================================ scheduler (same rules as the iPhone app)
 const W = [0.4872, 1.4003, 3.7145, 13.8206, 5.1618, 1.2298, 0.8975, 0.031, 1.6474, 0.1367, 1.0461, 2.1072, 0.0793, 0.3246, 1.587, 0.2272, 2.8755];
@@ -387,7 +508,7 @@ const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 const Rof = (t, s) => Math.pow(1 + FACTOR * t / s, DECAY);
 const D0 = g => clamp(W[4] - (g - 3) * W[5], 1, 10);
 function nextTestDay(c) { let best = null; const d = today(); for (const t of testsOf(c.g)) if (t.date && t.topics.includes(c.t)) { const td = dayOf(t.date); if (td > d && (best === null || td < best)) best = td; } return best; }
-function newState(old, conf, t) {        // FSRS memory update (no gap)
+function newState(old, conf, t) {
   const g = conf <= 2 ? 1 : conf - 1;
   if (!old) return {s: W[g - 1] * (conf === 2 ? 1.5 : 1), f: D0(g), r: 1, l: g === 1 ? 1 : 0};
   const st = {s: old.s, f: old.f, r: old.r, l: old.l};
@@ -402,12 +523,12 @@ function newState(old, conf, t) {        // FSRS memory update (no gap)
 }
 function gapMinutes(conf, s, fuzz) {
   const set = settings();
-  if (set.preset === "custom") return set.custom[conf - 1];
+  if (set.preset === "custom") return Math.min(set.custom[conf - 1], (set.maxIvl || 365) * 1440);
   const m = (PRESETS[set.preset] || PRESETS.smart).m;
-  if (m[conf - 1] != null) return m[conf - 1];
+  if (m[conf - 1] != null) return Math.min(m[conf - 1], (set.maxIvl || 365) * 1440);
   let days = Math.max(1, Math.round(s / FACTOR * (Math.pow(set.retention, 1 / DECAY) - 1)));
   if (fuzz && days > 2) days = Math.max(1, Math.round(days * (0.95 + Math.random() * 0.1)));
-  return Math.min(days, 365) * 1440;
+  return Math.min(days, set.maxIvl || 365) * 1440;
 }
 function capForTest(c, gap, conf) {
   if (!settings().planner || conf < 4) return gap;
@@ -427,6 +548,7 @@ function rateCard(id, conf, ms) {
   S.progress[id] = st;
   logReview(conf >= 3, !old, ms);
   markDirty(id);
+  LS.set("last", {label: session && session.label, ids: session ? session.scope.slice(0, 2000) : [], at: t, kind: session && session.kind});
   return old;
 }
 function logReview(good, isNew, ms, sign) {
@@ -439,24 +561,35 @@ function logReview(good, isNew, ms, sign) {
 }
 const confOf = id => (S.progress[id] ? S.progress[id].c : 0);
 const recallOf = c => { const s = S.progress[c.id]; return s ? Rof(Math.max(0, (now() - s.lt) / DAY), s.s) : null; };
-function cramStart(c) {          // final 3 days before a dated test: every card of it comes back once
+function cramStart(c) {          // final days before a dated test: every card of it comes back once
   if (!settings().planner) return null;
   const ex = nextTestDay(c); if (ex === null) return null;
-  const d = today(); return ex - d <= 3 ? dayStartMs(ex - 3) : null;
+  const d = today(), k = settings().plannerDays || 3; return ex - d <= k ? dayStartMs(ex - k) : null;
 }
 function isDue(c, t) { const s = S.progress[c.id]; if (!s) return false; if (s.d <= t) return true; const cs = cramStart(c); return cs !== null && s.lt < cs; }
+// "what I don't know": last rating 1–2, a card that keeps lapsing, or one the memory model says is fading
+function weakness(c) {
+  const s = S.progress[c.id]; if (!s) return null;
+  if (s.c <= 2) return "shaky";
+  if ((s.l || 0) >= (settings().leech || 6)) return "hard";
+  const r = recallOf(c); if (r !== null && r < 0.6) return "fading";
+  return null;
+}
 const mastery = cards => cards.length ? cards.reduce((a, c) => a + confOf(c.id), 0) / (5 * cards.length) : 0;
 function levels(cards) { const L = [0, 0, 0, 0, 0, 0]; for (const c of cards) L[confOf(c.id)]++; return L; }
-function counts(cards) { const t = now(); let over = 0, fresh = 0; for (const c of cards) { if (!S.progress[c.id]) fresh++; else if (isDue(c, t)) over++; } return {over, fresh, seen: cards.length - fresh, n: cards.length, m: mastery(cards), L: levels(cards)}; }
+function counts(cards) {
+  const t = now(); let over = 0, fresh = 0, weak = 0, known = 0;
+  for (const c of cards) { const s = S.progress[c.id]; if (!s) { fresh++; continue; } if (isDue(c, t)) over++; if (weakness(c)) weak++; else if (s.c >= 4) known++; }
+  return {over, fresh, weak, known, seen: cards.length - fresh, n: cards.length, m: mastery(cards), L: levels(cards)};
+}
 function newToday(g) { const d = today(); let n = 0; for (const c of BYGROUP[g] || []) { const s = S.progress[c.id]; if (s && s.n === d) n++; } return n; }
 function avgSecPerCard() { let n = 0, ms = 0; for (const day of Object.values(S.meta.days)) for (const v of Object.values(day)) { n += v[0]; ms += v[2]; } return n > 20 ? ms / n / 1000 : 12; }
 function estLeft(cards) { let steps = 0; for (const c of cards) steps += (5 - confOf(c.id)) / 1.6; return steps * avgSecPerCard(); }
-// exam planner: how many new cards a subject needs per day to see every card of its next dated test 3 days early
 function nextTest(g) { const d = today(); let best = null; for (const t of testsOf(g)) if (t.date) { const td = dayOf(t.date); if (td >= d && (!best || td < best.day)) best = {t, day: td}; } return best; }
 function plannerNeed(g) {
   const nt = nextTest(g); if (!nt || !settings().planner) return null;
   const set = new Set(nt.t.topics), cards = (BYGROUP[g] || []).filter(c => set.has(c.t));
-  const unseen = cards.filter(c => !S.progress[c.id]).length, daysLeft = nt.day - today() - 3;
+  const unseen = cards.filter(c => !S.progress[c.id]).length, daysLeft = nt.day - today() - (settings().plannerDays || 3);
   return {test: nt.t, day: nt.day, unseen, perDay: daysLeft > 0 ? Math.ceil(unseen / daysLeft) : unseen, daysLeft, cards};
 }
 function newLimit(g) {
@@ -468,7 +601,7 @@ function newLimit(g) {
 }
 const newLeft = g => Math.max(0, newLimit(g) - newToday(g));
 const cardsOfTopics = set => CARDS.filter(c => set.has(c.t));
-function cbar(L) { const n = L.reduce((a, b) => a + b, 0) || 1; return `<div class="cbar" role="img" aria-label="Confidence: ${L.slice(1).map((v, i) => (i + 1) + ": " + v).join(", ")}, not started: ${L[0]}">${[1, 2, 3, 4, 5].map(k => L[k] ? `<i style="width:${L[k] / n * 100}%;background:var(--c${k})"></i>` : "").join("")}</div>`; }
+function cbar(L, h) { const n = L.reduce((a, b) => a + b, 0) || 1; return `<div class="cbar" style="${h ? "height:" + h + "px" : ""}" role="img" aria-label="Confidence: ${L.slice(1).map((v, i) => (i + 1) + ": " + v).join(", ")}, not started: ${L[0]}">${[1, 2, 3, 4, 5].map(k => L[k] ? `<i style="width:${L[k] / n * 100}%;background:var(--c${k})"></i>` : "").join("")}</div>`; }
 function ring(L, size, pct, label) {
   const n = L.reduce((a, b) => a + b, 0) || 1, r = size / 2 - 9, C = 2 * Math.PI * r; let off = 0, segs = "";
   for (let k = 1; k <= 5; k++) { const frac = L[k] * k / (5 * n); if (!frac) continue; const len = frac * C; segs += `<circle cx="${size / 2}" cy="${size / 2}" r="${r}" fill="none" stroke="var(--c${k})" stroke-width="14" stroke-dasharray="${len} ${C - len}" stroke-dashoffset="${-off}" transform="rotate(-90 ${size / 2} ${size / 2})"/>`; off += len; }
@@ -479,7 +612,7 @@ const recallChip = c => { const r = recallOf(c); if (r === null) return `<span c
 // ================================================================ habit numbers
 function dayTotals(k) { const v = S.meta.days[isoOf(k)] || {}; let n = 0, g = 0, ms = 0; for (const x of Object.values(v)) { n += x[0]; g += x[1]; ms += x[2]; } return {n, g, ms}; }
 const counted = k => { const t = dayTotals(k); return t.n >= 20 || t.ms >= 5 * MIN; };
-function streak() {           // a day counts with 20 cards or 5 minutes; one free rest day per week
+function streak() {
   let d = today(), n = 0, lastRest = null;
   if (!counted(d)) d--;
   for (let guard = 0; guard < 2000; guard++) {
@@ -491,32 +624,116 @@ function streak() {           // a day counts with 20 cards or 5 minutes; one fr
 }
 const minutesToday = () => dayTotals(today()).ms / MIN;
 
+// ================================================================ listening (the browser's built-in voices; free, offline)
+const TTS = {queue: [], i: 0, title: "", playing: false, paused: false};
+function speechText(mdText) {
+  return String(mdText || "")
+    .replace(/```[\s\S]*?```/g, " (code example skipped) ")
+    .replace(/^\|.*\|$/gm, l => l.replace(/^\||\|$/g, "").split("|").map(x => x.trim()).filter(x => x && !/^:?-+:?$/.test(x)).join(", ") + ".")
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, "").replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
+    .replace(/[#>*_`~]|<[^>]+>/g, "").replace(/\[figure: [^\]]+\]/g, "")
+    .replace(/→/g, " to ").replace(/←/g, " from ").replace(/×/g, " times ").replace(/≈/g, " about ").replace(/≥/g, " at least ").replace(/≤/g, " at most ").replace(/−/g, " minus ")
+    .replace(/[ \t]+/g, " ").replace(/\n{2,}/g, "\n").trim();
+}
+function chunks(text) {
+  const out = [];
+  for (const para of text.split(/\n+/)) {
+    const sentences = para.match(/[^.!?]+[.!?]*\s*/g) || [para];
+    let buf = "";
+    for (const s of sentences) { if ((buf + s).length > 220 && buf) { out.push(buf.trim()); buf = ""; } buf += s; }
+    if (buf.trim()) out.push(buf.trim());
+  }
+  return out.filter(x => /\w/.test(x));
+}
+function pickVoice() {
+  const vs = speechSynthesis.getVoices(), want = settings().voice;
+  return vs.find(v => v.name === want) || vs.find(v => /en-GB|en-US/.test(v.lang) && /Premium|Enhanced|Natural|Google/.test(v.name)) || vs.find(v => /^en/.test(v.lang)) || null;
+}
+function listen(title, parts) {
+  if (!("speechSynthesis" in window)) return toast("This browser can't read aloud");
+  speechSynthesis.cancel();
+  TTS.queue = []; for (const p of parts) for (const c of chunks(speechText(p))) TTS.queue.push(c);
+  TTS.i = 0; TTS.title = title; TTS.playing = true; TTS.paused = false;
+  speakNext(); drawPlayer();
+}
+function speakNext() {
+  if (!TTS.playing || TTS.i >= TTS.queue.length) { TTS.playing = false; drawPlayer(); return; }
+  const u = new SpeechSynthesisUtterance(TTS.queue[TTS.i]);
+  const v = pickVoice(); if (v) { u.voice = v; u.lang = v.lang; } else u.lang = "en-GB";
+  u.rate = settings().rate || 1;
+  u.onend = () => { if (!TTS.playing || TTS.paused) return; TTS.i++; drawPlayer(); speakNext(); };
+  u.onerror = () => { TTS.i++; speakNext(); };
+  speechSynthesis.speak(u);
+}
+function ttsToggle() {
+  if (!TTS.queue.length) return;
+  if (TTS.paused || !TTS.playing) { TTS.paused = false; TTS.playing = true; speechSynthesis.cancel(); speakNext(); }
+  else { TTS.paused = true; speechSynthesis.cancel(); }
+  drawPlayer();
+}
+function ttsSkip(d) { TTS.i = clamp(TTS.i + d, 0, Math.max(0, TTS.queue.length - 1)); speechSynthesis.cancel(); if (TTS.playing && !TTS.paused) speakNext(); drawPlayer(); }
+function ttsStop() { TTS.playing = false; TTS.paused = false; TTS.queue = []; speechSynthesis.cancel(); drawPlayer(); }
+function drawPlayer() {
+  const el = document.getElementById("dock2");
+  if (!TTS.queue.length || ["study", "test", "check", "caught"].includes(view.name)) { el.innerHTML = ""; return; }
+  el.innerHTML = `<div class="player"><div class="col"><button class="icon-btn" data-act="ttsBack" aria-label="Back">⏮</button><button class="icon-btn" data-act="ttsToggle" aria-label="${TTS.playing && !TTS.paused ? "Pause" : "Play"}">${TTS.playing && !TTS.paused ? "❚❚" : "▶"}</button><button class="icon-btn" data-act="ttsFwd" aria-label="Next">⏭</button><div class="t"><b>${esc(TTS.title)}</b><span class="muted num">${Math.min(TTS.i + 1, TTS.queue.length)} / ${TTS.queue.length}</span></div><button class="icon-btn" data-act="ttsRate" aria-label="Speed">${settings().rate || 1}×</button><button class="icon-btn" data-act="ttsStop" aria-label="Stop listening">✕</button></div></div>`;
+}
+function readCard(c, withAnswer) { listen("Card", [c.q, withAnswer ? (c.cmd || c.a) : "", withAnswer && c.x ? "Why: " + c.x : ""]); }
+
+// ================================================================ AI helper (Groq through the relay; grounded on the topic's notes)
+const AICACHE = new Map();
+function topicContext(tid, extra) {
+  const T = libTopic(tid), parts = [];
+  if (T.summary) parts.push(T.summary);
+  if (T.remember) parts.push(T.remember);
+  if (extra) parts.push(extra);
+  if (T.exam) parts.push(T.exam.slice(0, 3000));
+  if (T.chapter) parts.push(T.chapter.slice(0, 4000));
+  return parts.join("\n\n").slice(0, 11000);
+}
+function cardContext(c) {
+  const l = cardLink(c.id), slideText = l && l.deck ? ((libTopic(c.t).files || []).flatMap(f => f.slides || []).find(s => s.key === l.key) || {}).text : "";
+  return topicContext(c.t, slideText ? "Slide text: " + slideText : "");
+}
+async function askAI(mode, payload) {
+  const k = mode + "|" + (payload.id || "") + "|" + (payload.question || "");
+  if (mode !== "ask" && AICACHE.has(k)) return AICACHE.get(k);
+  const lang = settings().aiLang && settings().aiLang !== "English" ? `\n\nWrite the whole answer in ${settings().aiLang}, keeping technical terms in English in brackets.` : "";
+  const d = await relay("/ai", Object.assign({mode}, payload, {question: (payload.question || "") + lang}), true);
+  AICACHE.set(k, d.text); return d.text;
+}
+async function aiInto(el, mode, payload) {
+  el.innerHTML = `<span class="spin"></span> Thinking…`;
+  try { const t = await askAI(mode, payload); el.innerHTML = mdFull(t); }
+  catch (e) { el.innerHTML = `<span class="err">${esc(e.status === 503 ? "The AI helper isn't switched on yet (no keys)." : e.message)}</span>`; }
+}
+
 // ================================================================ ui helpers
 const app = document.getElementById("app"), layer = document.getElementById("layer");
-let view = {name: "boot"}, sel = {}, session = null, quiz = null, tick = 0, undoBuf = null;
+let view = {name: "boot"}, picked = new Set(), session = null, quiz = null, tick = 0, undoBuf = null;
 const busy = () => ["study", "test", "check", "caught"].includes(view.name) || !!layer.innerHTML;
-function toast(msg) { document.querySelectorAll(".toast").forEach(t => t.remove()); const t = document.createElement("div"); t.className = "toast"; t.setAttribute("role", "status"); t.textContent = msg; document.body.appendChild(t); setTimeout(() => t.remove(), 2600); }
+function toast(msg) { document.querySelectorAll(".toast").forEach(t => t.remove()); const t = document.createElement("div"); t.className = "toast"; t.setAttribute("role", "status"); t.textContent = msg; document.body.appendChild(t); setTimeout(() => t.remove(), 2800); }
 const ICON = {
-  today: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11 12 4l9 7v9H3z"/><path d="M9 20v-6h6v6"/></svg>',
-  subjects: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="5" rx="1.5"/><rect x="3" y="11" width="18" height="5" rx="1.5"/><path d="M3 20h18"/></svg>',
+  learn: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 7l10-4 10 4-10 4z"/><path d="M6 9v5c3 2 9 2 12 0V9"/></svg>',
+  tests: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>',
   search: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>',
   progress: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>',
-  sliders: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/><circle cx="9" cy="6" r="2.2" fill="currentColor"/><circle cx="15" cy="12" r="2.2" fill="currentColor"/><circle cx="7" cy="18" r="2.2" fill="currentColor"/></svg>',
   gear: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>'
 };
-const TABNAMES = {today: "Today", subjects: "Subjects", search: "Search", progress: "Progress"};
+const TABNAMES = {learn: "Learn", tests: "Tests", search: "Search", progress: "Progress"};
 function tabs(active) { return `<div class="tabs"><nav aria-label="Main">${Object.keys(TABNAMES).map(k => `<button data-act="tab" data-v="${k}" ${active === k ? 'aria-current="page"' : ""}>${ICON[k]}${TABNAMES[k]}</button>`).join("")}</nav></div>`; }
 function bandTop() { return `<div class="bandtop"><div class="brand"><img src="icon-192.png" alt="">Recall</div><div class="row" style="gap:4px"><button class="sync" data-act="syncNow" data-s="${syncState}" aria-label="Sync status — tap to sync now"><i></i><span>${SYNC_TXT[syncState]}</span></button><button class="icon-btn" data-act="tab" data-v="settings" aria-label="Settings">${ICON.gear}</button></div></div>`; }
 function go(v) { view = v; if (v.name !== "test") clearInterval(tick); render(); window.scrollTo(0, 0); }
 function render() {
   document.documentElement.style.setProperty("--fs", String(1 + 0.12 * (settings().font || 0)));
-  const f = {boot: () => "", login: vLogin, today: vToday, subjects: vSubjects, group: vGroup, topic: vTopic, study: vStudy, check: vCheck, caught: vCaught, test: vTest, result: vResult, search: vSearch, progress: vProgress, settings: vSettings}[view.name] || vToday;
+  const f = {boot: () => "", login: vLogin, learn: vLearn, topic: vTopic, weak: vWeak, tests: vTests, testpage: vTestPage, study: vStudy, check: vCheck, caught: vCaught, test: vTest, result: vResult, search: vSearch, progress: vProgress, settings: vSettings}[view.name] || vLearn;
   app.innerHTML = f();
   app.classList.toggle("withtabs", !!app.querySelector(".tabs"));
   if (view.name === "search" && view.focus) { const i = document.getElementById("q"); if (i) { i.focus(); i.setSelectionRange(i.value.length, i.value.length); } }
   if (view.name === "study") { const i = document.getElementById("cmdIn"); if (i && !session.revealed) i.focus(); }
+  drawMermaid(app); fillImages(app); drawPlayer();
 }
-function openSheet(h) { layer.innerHTML = `<div class="scrim" data-act="closeSheet"><div class="sheet" role="dialog" aria-modal="true">${h}</div></div>`; }
+function openSheet(h) { layer.innerHTML = `<div class="scrim" data-act="closeSheet"><div class="sheet" role="dialog" aria-modal="true">${h}</div></div>`; fillImages(layer); drawMermaid(layer); }
 function closeSheet() { layer.innerHTML = ""; }
 
 // ================================================================ login
@@ -533,31 +750,43 @@ function vLogin() {
   <p class="small muted">A private app: only the owner's accounts can open the cards.</p></div>`;
 }
 
-// ================================================================ Today
+// ================================================================ Learn (home): every subject → topics with progress
 function greeting() { const h = new Date().getHours(); return h < 5 ? "Good night" : h < 12 ? "Good morning" : h < 18 ? "Hi" : "Good evening"; }
-function activeGroups() { return DECK.titles.flatMap(T => T.groups).filter(g => GROUPS[g] && statusOf(g) !== "paused"); }
-function planRows() {
-  return activeGroups().map(g => { const cs = BYGROUP[g] || [], c = counts(cs), nw = Math.min(c.fresh, newLeft(g)); return {g, over: c.over, nw, L: c.L, mins: Math.max(1, Math.round((c.over + nw * 1.6) * avgSecPerCard() / 60))}; }).filter(r => r.over || r.nw);
+const ORDER = {exam: 0, active: 1, maintain: 2, paused: 3};
+function orderedGroups() { return DECK.titles.flatMap(T => T.groups).filter(g => GROUPS[g]).sort((a, b) => ORDER[statusOf(a)] - ORDER[statusOf(b)]); }
+function weakCards(list) { return studyCards(list).filter(c => weakness(c)); }
+function topicRow(t, selecting) {
+  const cs = BYTOPIC[t.id] || [], c = counts(cs), code = topicCode(t.id), hid = hiddenTopic(t.id), sel = picked.has(t.id);
+  const tags = [c.weak ? `<span class="t-bad">${c.weak} don't know</span>` : "", c.over ? `<span class="t-over">${c.over} due</span>` : "", c.fresh ? `<span class="t-new">${c.fresh} new</span>` : "", hid ? `<span class="t-new">hidden</span>` : ""].filter(Boolean).join("");
+  return `<button class="trow ${sel ? "sel" : ""}" data-act="${selecting ? "pick" : "topic"}" data-t="${t.id}" ${hid ? 'style="opacity:.55"' : ""}>${selecting ? `<input type="checkbox" tabindex="-1" ${sel ? "checked" : ""} aria-hidden="true">` : (code ? `<span class="chip">${code}</span>` : `<span class="chip">•</span>`)}<span class="tt"><b>${esc(t.title)}</b>${cbar(c.L, 6)}<span class="tags">${tags || `<span class="muted">${c.n} cards · all good</span>`}</span></span><span class="pct">${Math.round(c.m * 100)}%</span></button>`;
 }
-function nearestTest() { let best = null; for (const g of Object.keys(GROUPS)) { if (statusOf(g) === "paused") continue; const p = plannerNeed(g); if (p && (!best || p.day < best.day)) best = Object.assign({g}, p); } return best; }
-function readiness(cards) { return mastery(cards); }
-function vToday() {
-  const all = counts(CARDS.filter(c => statusOf(c.g) !== "paused")), mins = minutesToday(), goal = settings().goal;
-  const name = (S.user && (S.user.name || S.user.email.split("@")[0]) || "").split(/[ ._]/)[0];
-  const rows = planRows(), total = rows.reduce((a, r) => a + r.mins, 0);
-  let h = `<header class="band"><div class="col">${bandTop()}<div class="hello">${greeting()}, ${esc(name ? name[0].toUpperCase() + name.slice(1) : "")}!</div>
-  <div class="kpis"><div class="kpi"><span>Day streak</span><b>${streak()}</b></div><div class="kpi"><span>Today</span><b>${Math.round(mins)}<small style="font-size:.9rem;color:var(--band-muted)"> / ${goal} min</small></b></div><div class="kpi"><span>Overdue</span><b>${all.over}</b></div></div>
-  <div class="goal" style="margin-top:10px" aria-label="Daily goal progress"><div class="gbar"><i style="width:${Math.min(100, mins / goal * 100)}%"></i></div><span class="small" style="color:var(--band-muted)">${mins >= goal ? "Goal done ✓" : Math.max(1, Math.round(goal - mins)) + " min to go"}</span></div>
-  <div class="studybar"><button class="icon-btn" data-act="mixSheet" aria-label="Adjust the study mix">${ICON.sliders}</button><button class="btn primary" data-act="studyPlan" ${rows.length ? "" : "disabled"}>${rows.length ? "Start · " + total + " min plan ▸" : "All caught up"}</button></div></div></header><main class="col">`;
-  const nt = nearestTest();
-  if (nt) {
-    const ready = readiness(nt.cards), lim = newLimit(nt.g), onTrack = nt.unseen === 0 || (nt.daysLeft > 0 && nt.perDay <= lim);
-    h += `<div class="section"><div class="eyebrow">${statusOf(nt.g) === "exam" ? "Exam soon" : "Next test"}</div><button class="testcard" data-act="group" data-g="${nt.g}" style="text-align:left;width:100%"><div class="days"><b class="num">${nt.day - today()}</b><span>${nt.day - today() === 1 ? "day" : "days"}</span></div><div class="grow"><h3>${esc(GROUPS[nt.g].title)} ${esc(nt.test.title)} · ${fmtDate(nt.day)}</h3><div class="small muted">${Math.round(ready * 100)}% ready · ${nt.unseen ? nt.unseen + " cards not seen yet · " + nt.perDay + " new/day needed" : "every card seen"}</div><div class="cbar" style="margin-top:6px"><i style="width:${ready * 100}%;background:var(--accent)"></i></div></div><span class="pill ${onTrack ? "ok" : "warn"}">${onTrack ? "On track" : "Behind"}</span></button></div>`;
+function vLearn() {
+  const mins = minutesToday(), goal = settings().goal, name = (S.user && (S.user.name || S.user.email.split("@")[0]) || "").split(/[ ._0-9]/)[0];
+  const last = LS.get("last"), lastOk = last && last.ids && last.ids.length && now() - last.at < 3 * DAY;
+  const selecting = !!view.select;
+  let h = `<header class="band"><div class="col">${bandTop()}<div class="hello">${greeting()}${name ? ", " + esc(name[0].toUpperCase() + name.slice(1)) : ""}!</div>
+  <div class="kpis"><div class="kpi"><span>Day streak</span><b>${streak()}</b></div><div class="kpi"><span>Today</span><b>${Math.round(mins)}<small style="font-size:.85rem;color:var(--band-muted)"> / ${goal} min</small></b></div><div class="kpi"><span>Don't know</span><b>${weakCards(CARDS).length}</b></div></div>
+  <div class="goal" style="margin-top:10px"><div class="gbar"><i style="width:${Math.min(100, mins / goal * 100)}%"></i></div><span class="small" style="color:var(--band-muted)">${mins >= goal ? "Goal done ✓" : Math.max(1, Math.round(goal - mins)) + " min to go"}</span></div>
+  <div class="studybar">${lastOk ? `<button class="btn primary" data-act="resume">Continue · ${esc(last.label || "last session")} ▸</button>` : `<button class="btn primary" data-act="studyPlan">Start today's mix ▸</button>`}<button class="icon-btn" data-act="mixSheet" aria-label="Adjust the study mix" title="Study mix">⚖</button></div>
+  <div class="row small" style="margin-top:10px;color:var(--band-muted);gap:8px"><span>Pick a topic below to study it, or</span><button class="back" style="min-height:0;color:#fff;text-decoration:underline" data-act="selectMode">${selecting ? "stop combining topics" : "combine several topics"}</button></div></div></header><main class="col">`;
+  // what I don't know
+  const weakBy = orderedGroups().filter(g => statusOf(g) !== "paused").map(g => ({g, w: weakCards(BYGROUP[g] || []), over: counts(studyCards(BYGROUP[g] || [])).over})).filter(x => x.w.length || x.over);
+  if (weakBy.length) h += `<div class="section"><div class="row between"><div class="eyebrow">What you don't know yet</div><button class="btn sm ghost" data-act="weakAll">See all ›</button></div><div class="weak">${weakBy.map(x => `<button data-act="weakStudy" data-g="${x.g}"><span class="row" style="gap:8px"><span class="chip">${esc(GROUPS[x.g].title)}</span><b class="t-bad">${x.w.length}</b></span><span class="small muted">${x.w.length ? "shaky / fading cards" : ""}${x.w.length && x.over ? " · " : ""}${x.over ? x.over + " due" : ""}</span></button>`).join("")}</div></div>`;
+  for (const g of orderedGroups()) {
+    const G = GROUPS[g], all = BYGROUP[g] || [], c = counts(studyCards(all)), st = statusOf(g), nt = nextTest(g);
+    const topics = G.topics.filter(t => t.id !== "grk-info" || !selecting);
+    const paused = st === "paused" && !view["open_" + g];
+    h += `<div class="section"><div class="subject"><header><span class="code">${esc(G.title)}</span><span class="stack" style="gap:4px;min-width:0"><b>${esc(G.name)}</b><span class="row small" style="gap:6px"><button class="pill ${st}" data-act="statusSheet" data-g="${g}">${STATUS[st]} ▾</button>${nt ? `<button class="pill" data-act="testpage" data-g="${g}" data-t="${nt.t.id}">${esc(nt.t.title)} · ${nt.day - today()} d</button>` : ""}<span class="muted num">${Math.round(c.m * 100)}% · ${c.seen}/${c.n}</span></span></span><button class="icon-btn" data-act="subjectMenu" data-g="${g}" aria-label="More for ${esc(G.title)}">⋯</button></header>
+    ${paused ? `<div class="sfoot"><button class="btn sm" data-act="openPaused" data-g="${g}">Show ${G.topics.length} topics</button></div>` : topics.map(t => topicRow(t, selecting)).join("") +
+      `<div class="sfoot"><button class="btn sm" data-act="studyGroup" data-g="${g}">Study ${esc(G.title)}</button>${c.weak ? `<button class="btn sm" data-act="weakStudy" data-g="${g}">Fix ${c.weak} weak</button>` : ""}<button class="btn sm" data-act="tab" data-v="tests" data-g="${g}">Tests</button></div>`}</div></div>`;
   }
-  h += `<div class="section"><div class="eyebrow">Today's plan</div>`;
-  h += rows.length ? rows.map(r => `<button class="plan" data-act="studyGroup" data-g="${r.g}"><span class="code">${esc(GROUPS[r.g].title)}</span><span class="stack" style="gap:5px;min-width:0"><span><b>${r.over ? r.over + " overdue" : ""}${r.over && r.nw ? " · " : ""}${r.nw ? r.nw + " new" : ""}</b> <span class="pill ${statusOf(r.g)}" style="margin-left:4px">${STATUS[statusOf(r.g)]}</span></span>${cbar(r.L)}</span><span class="right"><b>${r.mins}</b><br><span class="muted">min</span></span></button>`).join("") : `<div class="panel"><b>Nothing due right now.</b> <span class="muted">Overdue cards and today's new cards are done. Try a quick test or a drill from a subject.</span></div>`;
-  h += `</div><div class="section"><div class="eyebrow">Last 12 weeks</div><div class="panel"><div class="heat" aria-label="Study minutes per day">${heatCells()}</div><div class="row small muted" style="margin-top:8px;justify-content:space-between"><span>${fmtDate(today() - 83)}</span><span>Darker = more minutes</span><span>Today</span></div></div></div>`;
-  return h + `</main>` + tabs("today");
+  h += `<div class="section"><div class="eyebrow">Last 12 weeks</div><div class="panel"><div class="heat" aria-label="Study minutes per day">${heatCells()}</div><div class="row small muted" style="margin-top:8px;justify-content:space-between"><span>${fmtDate(today() - 83)}</span><span>Darker = more minutes</span><span>Today</span></div></div></div>`;
+  h += `</main>`;
+  if (selecting && picked.size) {
+    const cs = studyCards(cardsOfTopics(picked)), c = counts(cs);
+    h += `<div class="combine"><div class="col"><span class="grow small"><b>${plural(picked.size, "topic")}</b> · ${cs.length} cards · ${c.weak} weak</span><button class="btn primary" data-act="studyPicked">Study</button><button class="btn" data-act="drillPicked">Drill</button><button class="btn" data-act="testPicked">Test</button><button class="btn" data-act="listenPicked" aria-label="Listen to the summaries">🎧</button><button class="btn" data-act="clearPicked" aria-label="Clear selection">✕</button></div></div>`;
+  }
+  return h + tabs("learn");
 }
 function heatCells() {
   const d0 = today() - 83, out = [];
@@ -565,51 +794,104 @@ function heatCells() {
   return out.join("");
 }
 
-// ================================================================ Subjects
-function vSubjects() {
-  let h = `<header class="band"><div class="col">${bandTop()}<div class="hello">Subjects</div></div></header><main class="col">`;
-  for (const T of DECK.titles) {
-    h += `<div class="section"><div class="eyebrow">${esc(T.title)}</div>`;
-    for (const gid of T.groups) { const g = GROUPS[gid]; if (!g) continue; const c = counts(BYGROUP[gid] || []);
-      h += `<button class="subj" data-act="group" data-g="${gid}"><span class="code">${esc(g.title)}</span><span class="stack" style="gap:5px;min-width:0"><span><b>${esc(g.name)}</b> <span class="pill ${statusOf(gid)}">${STATUS[statusOf(gid)]}</span></span><span class="small muted num">${c.seen} / ${g.n} cards</span>${cbar(c.L)}</span><span class="right"><b>${(c.m * 100).toFixed(1)}%</b><br>${c.over ? `<span style="color:var(--c1);font-weight:700">${c.over} overdue</span>` : `<span class="muted">mastery</span>`}</span></button>`; }
+// ================================================================ What I don't know
+function vWeak() {
+  const gs = view.g ? [view.g] : orderedGroups().filter(g => statusOf(g) !== "paused");
+  let h = `<header class="band"><div class="col"><button class="back" data-act="tab" data-v="learn">‹ Learn</button><h1 style="margin-top:6px">What you don't know yet</h1><p class="small" style="color:var(--band-muted);margin:6px 0 0">Cards you rated 1–2, cards that keep slipping (${settings().leech}+ lapses) and cards the memory model says are fading (under 60%).</p></div></header><main class="col">`;
+  for (const g of gs) {
+    const w = weakCards(BYGROUP[g] || []); if (!w.length) continue;
+    const byT = {}; w.forEach(c => (byT[c.t] = byT[c.t] || []).push(c));
+    h += `<div class="section"><div class="row between"><h2>${esc(GROUPS[g].name)} · ${w.length}</h2><button class="btn sm primary" data-act="weakStudy" data-g="${g}">Study all</button></div>`;
+    for (const [t, cs] of Object.entries(byT).sort((a, b) => b[1].length - a[1].length)) h += `<details class="sec"><summary><span>${topicCode(t) ? `<span class="chip">${topicCode(t)}</span> ` : ""}${esc(TOPICS[t].title)} · ${cs.length}</span></summary><div class="stack" style="gap:8px">${listCards(cs, [])}<button class="btn sm" data-act="studyIds" data-ids="${cs.map(c => c.id).join(",")}" data-label="${esc(TOPICS[t].title)} · weak">Study these ${cs.length}</button></div></details>`;
     h += `</div>`;
   }
-  const bm = bookmarked();
-  h += `<div class="section"><div class="eyebrow">Bookmarks</div>${bm.length ? `<button class="btn block" data-act="studyBm">★ Study ${plural(bm.length, "bookmarked card")}</button>` : `<p class="muted small">Tap ☆ on a card while studying to bookmark it.</p>`}</div>`;
-  return h + `</main>` + tabs("subjects");
+  if (!gs.some(g => weakCards(BYGROUP[g] || []).length)) h += `<div class="panel" style="margin-top:18px"><b>Nothing shaky right now.</b> <span class="muted">Cards appear here after you rate them 1 or 2, or when you haven't seen them for a while.</span></div>`;
+  return h + `</main>` + tabs("learn");
 }
-const bookmarked = () => CARDS.filter(c => S.meta.bm[c.id] && S.meta.bm[c.id].v);
 
-// ================================================================ Subject screen
-function selected(gid) { if (!sel[gid]) sel[gid] = new Set(GROUPS[gid].topics.filter(t => t.id !== "grk-info").map(t => t.id)); return sel[gid]; }
-function vGroup() {
-  const g = GROUPS[view.g], set = selected(g.id), cs = BYGROUP[g.id] || [], gc = counts(cs), tab = view.tab || "topics";
-  const p = plannerNeed(g.id), readyLbl = p ? "Ready for " + p.test.title : "Est. time left", readyVal = p ? Math.round(mastery(p.cards) * 100) + "%" : fmtDur(estLeft(cs));
-  let h = `<header class="band"><div class="col"><button class="back" data-act="tab" data-v="subjects">‹ Subjects</button>
-  <div class="row" style="margin-top:6px;gap:14px"><span class="code" style="background:var(--band-soft)">${esc(g.title)}</span><div class="grow"><h1 style="font-size:1.4rem">${esc(g.name)}</h1><div class="small" style="color:var(--band-muted)">${g.n} cards · ${g.topics.length} topics · <button class="back" style="min-height:0;color:#fff;text-decoration:underline" data-act="statusSheet" data-g="${g.id}">${STATUS[statusOf(g.id)]}</button></div></div></div>
-  <div class="kpis"><div class="kpi"><span>Mastery</span><b>${(gc.m * 100).toFixed(1)}%</b></div><div class="kpi"><span>${esc(readyLbl)}</span><b>${readyVal}</b></div><div class="kpi"><span>Overdue</span><b>${gc.over}</b></div></div>
-  <div class="studybar"><button class="btn primary" data-act="study" data-g="${g.id}" ${set.size ? "" : "disabled"}>Study ${set.size === g.topics.length ? "(all)" : "(" + set.size + ")"} ▸</button><button class="btn" style="background:var(--band-soft);color:#fff;border-color:transparent" data-act="drillSheet" data-g="${g.id}" ${set.size ? "" : "disabled"}>⚡ Drill</button></div></div></header><main class="col">
-  <div class="subtabs" role="tablist">${[["topics", "Topics"], ["tests", "Tests"], ["cards", "Cards"]].map(([k, l]) => `<button role="tab" data-act="gtab" data-v="${k}" aria-pressed="${tab === k}">${l}</button>`).join("")}</div>`;
-  if (tab === "topics") {
-    const order = settings().order[g.id] || "random", sc = counts(cardsOfTopics(set));
-    h += `<div class="section"><div class="row between"><label class="row" style="gap:8px;font-weight:700"><input type="checkbox" class="check" data-act="selToggleAll" data-g="${g.id}" ${set.size === g.topics.length ? "checked" : ""}> All</label>
-    <div class="seg" role="group" aria-label="Order of new cards"><button data-act="order" data-g="${g.id}" data-v="progressive" aria-pressed="${order === "progressive"}">Progressive</button><button data-act="order" data-g="${g.id}" data-v="random" aria-pressed="${order === "random"}">Random</button></div></div>
-    <div class="panel" style="padding:4px 14px">${g.topics.map(t => { const c = counts(BYTOPIC[t.id] || []), code = topicCode(t.id); return `<div class="topic"><input type="checkbox" class="check" id="tp-${t.id}" data-act="toggleTopic" data-g="${g.id}" data-t="${t.id}" ${set.has(t.id) ? "checked" : ""}><label for="tp-${t.id}"><span>${code ? `<span class="chip">${code}</span> ` : ""}<b>${esc(t.title)}</b></span><span class="row small muted num" style="gap:8px"><span>${c.seen}/${t.n} studied</span>${c.over ? `<span class="pill over">${c.over} overdue</span>` : ""}<span>${(c.m * 100).toFixed(0)}%</span></span>${cbar(c.L)}</label><button class="tbtn" data-act="topic" data-t="${t.id}" aria-label="Cards in ${esc(t.title)}">›</button></div>`; }).join("")}</div>
-    <p class="small muted">Selected: ${sc.n} cards · ${sc.over} overdue · ${Math.min(sc.fresh, newLeft(g.id))} new allowed today${p && p.unseen ? ` (planner: ${p.perDay}/day to see all of ${esc(p.test.title)} by ${fmtDate(p.day - 3)})` : ""}. Overdue cards come first. <b>Progressive</b> takes new cards topic by topic; <b>Random</b> mixes them.</p>
-    <button class="btn ghost block" data-act="addCard" data-g="${g.id}">+ Add a card</button></div>`;
-  } else if (tab === "tests") {
-    const d = today(), hist = S.tests.filter(t => t.g === g.id);
-    h += `<div class="section">${testsOf(g.id).map(t => { const days = t.date ? dayOf(t.date) - d : null; const mine = hist.filter(x => x.title === t.title); const best = mine.length ? Math.max(...mine.map(x => x.right / x.n)) : null; const last = mine.length ? mine[mine.length - 1] : null;
-      return `<div class="testcard"><div class="days"${days === null || days < 0 ? ' style="background:var(--soft);color:var(--muted)"' : ""}><b class="num">${days === null ? "—" : days < 0 ? "✓" : days}</b><span>${days === null ? "no date" : days < 0 ? "past" : days === 1 ? "day" : "days"}</span></div><div class="grow"><h3>${esc(t.title)}</h3><div class="small muted">${esc(t.note || "")} · ${t.n} q · ${t.min} min · ${t.kind === "exam" ? "results at the end" : "feedback each answer"}${last ? ` · last ${Math.round(last.right / last.n * 100)}%, best ${Math.round(best * 100)}%` : ""}</div></div><button class="btn sm" data-act="startTest" data-g="${g.id}" data-t="${t.id}">Start</button></div>`; }).join("")}
-    <button class="btn block" data-act="customTest" data-g="${g.id}" ${set.size ? "" : "disabled"}>Custom test from the ticked topics</button><button class="btn ghost block" data-act="testsEditor" data-g="${g.id}">Edit tests & dates</button></div>`;
-  } else {
-    h += `<div class="section"><button class="btn block" data-act="tab" data-v="search" data-gf="${g.id}">Search ${esc(g.title)} cards</button><div class="stack" style="gap:8px">${listCards(cs.slice(0, 60), [])}</div>${cs.length > 60 ? `<p class="small muted">Showing 60 of ${cs.length}. Open a topic or use Search for the rest.</p>` : ""}</div>`;
-  }
-  return h + `</main>` + tabs("subjects");
-}
+// ================================================================ Topic page: Learn · Slides · Listen · Videos · Cards · Ask
+const TTABS = [["learn", "Learn"], ["slides", "Slides"], ["listen", "Listen"], ["videos", "Videos"], ["cards", "Cards"], ["ask", "Ask AI"]];
 function vTopic() {
-  const t = TOPICS[view.t], cards = BYTOPIC[view.t] || [], nu = noteUrl(view.t);
-  return `<header class="band"><div class="col"><button class="back" data-act="group" data-g="${t.g}">‹ ${esc(GROUPS[t.g].name)}</button><h1 style="font-size:1.4rem;margin-top:6px">${esc(t.title)}</h1><div class="studybar"><button class="btn primary" data-act="studyTopic" data-t="${t.id}">Study this topic ▸</button>${nu ? `<a class="btn" style="background:var(--band-soft);color:#fff;border-color:transparent" href="${nu}">Open note</a>` : ""}</div></div></header><main class="col"><p class="small muted">${cards.length} cards · the coloured edge shows your last rating.</p><div class="stack" style="gap:8px">${listCards(cards, [])}</div></main>` + tabs("subjects");
+  const T = TOPICS[view.t], L = libTopic(view.t), cs = BYTOPIC[view.t] || [], c = counts(cs), tab = view.tab || "learn", nu = noteUrl(view.t);
+  const slides = (L.files || []).flatMap(f => f.slides || []);
+  let h = `<header class="band"><div class="col"><button class="back" data-act="tab" data-v="learn">‹ ${esc(GROUPS[T.g].name)}</button>
+  <div class="row" style="margin-top:6px;gap:12px;flex-wrap:nowrap"><div class="grow"><h1 style="font-size:1.35rem">${topicCode(view.t) ? `<span class="chip" style="vertical-align:3px">${topicCode(view.t)}</span> ` : ""}${esc(T.title)}</h1>
+  <div class="small" style="color:var(--band-muted);margin-top:4px">${c.n} cards · ${c.known} known · <span style="color:#F59BD8">${c.weak} don't know</span> · ${c.fresh} new</div></div>${ring(c.L, 74, Math.round(c.m * 100) + "%", "")}<button class="icon-btn" data-act="topicMenu" data-t="${view.t}" aria-label="More">⋯</button></div>
+  <div class="studybar"><button class="btn primary" data-act="studyTopic" data-t="${view.t}">Study ▸</button>${c.weak ? `<button class="btn" data-act="studyIds" data-ids="${weakCards(cs).map(x => x.id).join(",")}" data-label="${esc(T.title)} · weak">Fix ${c.weak}</button>` : ""}<button class="btn" data-act="drillTopic" data-t="${view.t}">⚡ Drill</button></div></div></header>
+  <main class="col"><div class="subtabs" role="tablist">${TTABS.map(([k, l]) => `<button role="tab" data-act="ttab" data-v="${k}" aria-pressed="${tab === k}">${l}${k === "slides" && slides.length ? " · " + slides.length : k === "videos" && (L.videos || []).length ? " · " + L.videos.length : ""}</button>`).join("")}</div>`;
+  if (tab === "learn") {
+    const hasAny = L.summary || L.remember || (L.sections || []).length || L.chapter;
+    if (!hasAny) h += `<div class="panel" style="margin-top:14px"><b>No notes for this topic yet.</b> <span class="muted">Study the cards, or ask the AI for a summary.</span><div style="margin-top:10px"><button class="btn sm" data-act="aiSummary" data-t="${view.t}">✨ Make a summary</button></div><div id="aiSum"></div></div>`;
+    if (L.summary) h += `<div class="section"><div class="eyebrow">In one minute</div><div class="panel prose">${mdFull(L.summary)}</div></div>`;
+    if (L.remember) h += `<div class="section"><div class="eyebrow">What to remember</div><div class="panel prose">${mdFull(L.remember)}</div></div>`;
+    if (L.exam) h += `<div class="section"><details class="sec"><summary>Exam questions with answers</summary><div class="prose">${mdFull(L.exam)}</div></details></div>`;
+    const rest = (L.sections || []).filter(s => s.md && ![L.summary, L.remember, L.exam].includes(s.md));
+    if (rest.length) h += `<div class="section"><div class="eyebrow">Full notes</div>${rest.map(s => `<details class="sec"><summary>${esc(s.h || "Introduction")}</summary><div class="prose">${mdFull(s.md)}</div></details>`).join("")}</div>`;
+    if (L.chapter) h += `<div class="section"><details class="sec"><summary>Teacher's chapter (course website)</summary><div class="prose">${mdFull(L.chapter.replace(/\[figure: ([^\]]+)\]/g, (m, f) => { const fig = (L.figures || []).find(x => x.key.endsWith(f.toLowerCase())); return fig ? `\n\n<img data-key="${fig.key}" alt="${esc(fig.alt)}">\n\n*${esc(fig.alt)}*\n\n` : ""; }))}</div></details></div>`;
+    if ((L.figures || []).length) h += `<div class="section"><div class="eyebrow">Figures</div><div class="slides">${L.figures.map((f, i) => `<button data-act="figView" data-t="${view.t}" data-i="${i}" aria-label="${esc(f.alt)}"><img data-key="${f.key}" alt=""></button>`).join("")}</div></div>`;
+    if (nu) h += `<a class="note" href="${nu}">📓 Open the note in Obsidian</a>`;
+  } else if (tab === "slides") {
+    const files = L.files || [];
+    if (!files.length) h += `<p class="muted" style="margin-top:14px">No lecture file for this topic.</p>`;
+    for (const f of files) {
+      h += `<div class="section"><div class="row between"><h3>${esc(f.title)}${f.pages ? ` <span class="muted small">· ${f.pages} pages</span>` : ""}</h3><button class="btn sm" data-act="openFile" data-k="${f.key}">Open PDF ↗</button></div>`;
+      if ((f.slides || []).length) h += `<div class="slides">${f.slides.map((s, i) => `<button data-act="slideView" data-t="${view.t}" data-k="${f.key}" data-i="${i}" aria-label="Slide ${s.n}"><img data-key="${s.key}" alt="" loading="lazy"><span>${s.n}</span></button>`).join("")}</div>`;
+      h += `</div>`;
+    }
+  } else if (tab === "listen") {
+    const opts = [];
+    if (L.summary || L.remember) opts.push(["sum", "Summary + what to remember", "about " + Math.max(1, Math.round(((L.summary || "") + (L.remember || "")).split(/\s+/).length / 150)) + " min"]);
+    if ((L.sections || []).length) opts.push(["notes", "All my notes for this topic", "about " + Math.max(1, Math.round((L.sections || []).reduce((a, s) => a + s.md.split(/\s+/).length, 0) / 150)) + " min"]);
+    if (L.chapter) opts.push(["chapter", "Teacher's chapter", "about " + Math.round(L.chapter.split(/\s+/).length / 150) + " min"]);
+    if (slides.length) opts.push(["slides", "Slide texts, in order", plural(slides.length, "slide")]);
+    if (cs.length) opts.push(["cards", "Cards: question, then answer", plural(Math.min(cs.length, 60), "card")]);
+    h += `<div class="section"><p class="muted small">Uses your device's voices (free and offline). On iPhone, Settings → Accessibility → Spoken Content → Voices has better "Enhanced" voices to download. Speed and voice are in Settings.</p><div class="menu">${opts.map(([k, l, d]) => `<button data-act="listenTopic" data-t="${view.t}" data-v="${k}">🎧 <span class="grow">${l}<small>${d}</small></span>▸</button>`).join("")}</div></div>`;
+  } else if (tab === "videos") {
+    const vids = L.videos || [];
+    h += `<div class="section">${vids.length ? vids.map(v => `<a class="vid" href="https://www.youtube.com/watch?v=${v.id}" target="_blank" rel="noopener"><img src="https://i.ytimg.com/vi/${v.id}/mqdefault.jpg" alt="" loading="lazy"><span class="stack" style="gap:4px;min-width:0"><b>${esc(v.title)}</b><span class="small muted">${esc([v.channel, v.len].filter(Boolean).join(" · "))}</span>${v.why ? `<span class="small">${esc(v.why)}</span>` : ""}${v.level ? `<span><span class="pill ${v.level === "basic" ? "ok" : v.level === "deeper" ? "warn" : "bad"}">${v.level}</span></span>` : ""}</span></a>`).join("") : `<p class="muted">No videos picked for this topic yet.</p>`}<a class="btn" href="https://www.youtube.com/results?search_query=${encodeURIComponent(T.title + " " + (GROUPS[T.g].name || ""))}" target="_blank" rel="noopener">Search YouTube for "${esc(T.title)}" ↗</a></div>`;
+  } else if (tab === "cards") {
+    const f = view.cf || "all", list = cs.filter(c => f === "all" || (f === "weak" && weakness(c)) || (f === "new" && !S.progress[c.id]) || (f === "due" && isDue(c, now())));
+    h += `<div class="section"><div class="filters">${[["all", "All"], ["weak", "Don't know"], ["due", "Due"], ["new", "New"]].map(([k, l]) => `<button data-act="cardFilter" data-v="${k}" aria-pressed="${f === k}">${l}</button>`).join("")}</div><div class="stack" style="gap:8px">${listCards(list.slice(0, 150), [])}</div>${list.length > 150 ? `<p class="small muted">Showing 150 of ${list.length}.</p>` : ""}<button class="btn ghost block" data-act="addCard" data-g="${T.g}" data-t="${view.t}">+ Add a card</button></div>`;
+  } else if (tab === "ask") {
+    const hist = (CHATS[view.t] || []);
+    h += `<div class="section"><p class="muted small">Ask anything about <b>${esc(T.title)}</b>. Answers use this topic's notes${L.chapter ? " and the teacher's chapter" : ""}; check important details against the slides.</p>
+    <div class="chat" id="chat">${hist.map(m => `<div class="msg ${m.role === "user" ? "me" : "ai prose"}">${m.role === "user" ? esc(m.content) : mdFull(m.content)}</div>`).join("") || `<div class="row" style="gap:6px">${["Explain this topic simply", "What will the exam ask here?", "Give me a worked example", "What are the common traps?"].map(q => `<button class="btn sm" data-act="askPreset" data-q="${esc(q)}">${esc(q)}</button>`).join("")}</div>`}</div>
+    <form id="askForm" class="row" style="flex-wrap:nowrap;margin-top:6px"><input id="askIn" class="grow" style="min-height:48px;border-radius:14px;border:1.5px solid var(--line);background:var(--card);padding:0 14px" placeholder="Your question" autocomplete="off"><button class="btn primary" type="submit">Ask</button></form></div>`;
+  }
+  return h + `</main>` + tabs("learn");
+}
+const CHATS = {};
+
+// ================================================================ Tests: every dated test and exam, and "everything for this test"
+function vTests() {
+  const d = today(), rows = [];
+  for (const g of orderedGroups()) for (const t of testsOf(g)) rows.push({g, t, day: t.date ? dayOf(t.date) : null});
+  rows.sort((a, b) => (a.day === null) - (b.day === null) || (a.day ?? 0) - (b.day ?? 0));
+  const gf = view.g;
+  let h = `<header class="band"><div class="col">${bandTop()}<div class="hello">Tests & exams</div><p class="small" style="color:var(--band-muted);margin:4px 0 0">Open one to see everything you need to know for it, your readiness, past papers, and to take a practice test.</p></div></header><main class="col">`;
+  h += `<div class="filters" style="margin-top:12px"><button data-act="testsFilter" data-v="" aria-pressed="${!gf}">All</button>${orderedGroups().map(g => `<button data-act="testsFilter" data-v="${g}" aria-pressed="${gf === g}">${esc(GROUPS[g].title)}</button>`).join("")}</div>`;
+  h += `<div class="section">${rows.filter(r => !gf || r.g === gf).map(({g, t, day}) => { const cs = (BYGROUP[g] || []).filter(c => t.topics.includes(c.t)), m = mastery(cs), days = day === null ? null : day - d;
+    return `<button class="testcard" data-act="testpage" data-g="${g}" data-t="${t.id}"><div class="days"${days === null || days < 0 ? ' style="background:var(--soft);color:var(--muted)"' : ""}><b class="num">${days === null ? "—" : days < 0 ? "✓" : days}</b><span>${days === null ? "no date" : days < 0 ? "past" : days === 1 ? "day" : "days"}</span></div><div class="grow"><h3>${esc(GROUPS[g].title)} · ${esc(t.title)}</h3><div class="small muted">${esc(t.note || "")}</div><div class="cbar" style="margin-top:6px;height:6px"><i style="width:${m * 100}%;background:var(--accent)"></i></div></div><span class="num" style="font-weight:700">${Math.round(m * 100)}%</span></button>`; }).join("")}</div>`;
+  return h + `</main>` + tabs("tests");
+}
+function vTestPage() {
+  const g = view.g, t = testsOf(g).find(x => x.id === view.t) || testsOf(g)[0]; if (!t) return vTests();
+  const cs = (BYGROUP[g] || []).filter(c => t.topics.includes(c.t)), c = counts(cs), days = t.date ? dayOf(t.date) - today() : null, files = (LIB && LIB.subjects && LIB.subjects[g] && LIB.subjects[g].files) || [];
+  const hist = S.tests.filter(x => x.g === g && x.title === t.title).slice(-5);
+  let h = `<header class="band"><div class="col"><button class="back" data-act="tab" data-v="tests">‹ Tests</button><h1 style="margin-top:6px">${esc(GROUPS[g].title)} · ${esc(t.title)}</h1><div class="small" style="color:var(--band-muted);margin-top:4px">${esc(t.note || "")}${days !== null ? ` · ${days >= 0 ? days + " days left" : "done"}` : ""}</div>
+  <div class="kpis"><div class="kpi"><span>Ready</span><b>${Math.round(c.m * 100)}%</b></div><div class="kpi"><span>Don't know</span><b>${c.weak}</b></div><div class="kpi"><span>Not seen</span><b>${c.fresh}</b></div></div>
+  <div class="studybar"><button class="btn primary" data-act="startTest" data-g="${g}" data-t="${t.id}">Practice test · ${t.n} q ▸</button><button class="btn" data-act="studyIds" data-ids="${cs.map(x => x.id).join(",")}" data-label="${esc(GROUPS[g].title + " " + t.title)}" data-mode="srs">Study</button></div></div></header><main class="col">`;
+  h += `<div class="section"><div class="eyebrow">Readiness per topic</div><div class="panel" style="padding:4px 14px">${t.topics.filter(x => TOPICS[x]).map(x => { const tc = counts(BYTOPIC[x] || []); return `<button class="trow" style="padding-inline:0" data-act="topic" data-t="${x}"><span class="chip">${topicCode(x) || "•"}</span><span class="tt"><b>${esc(TOPICS[x].title)}</b>${cbar(tc.L, 6)}<span class="tags">${tc.weak ? `<span class="t-bad">${tc.weak} don't know</span>` : ""}${tc.fresh ? `<span class="t-new">${tc.fresh} new</span>` : ""}</span></span><span class="pct">${Math.round(tc.m * 100)}%</span></button>`; }).join("")}</div></div>`;
+  h += `<div class="section"><div class="row between"><div class="eyebrow">Everything you need to know</div><button class="btn sm" data-act="listenTest" data-g="${g}" data-t="${t.id}">🎧 Listen</button></div>`;
+  for (const x of t.topics.filter(x => TOPICS[x])) {
+    const L = libTopic(x); if (!L.summary && !L.remember) continue;
+    h += `<details class="sec" ${t.topics.length <= 3 ? "open" : ""}><summary>${topicCode(x) ? `<span class="chip">${topicCode(x)}</span> ` : ""}${esc(TOPICS[x].title)}</summary><div class="prose">${mdFull([L.summary, L.remember].filter(Boolean).join("\n\n"))}</div>${L.exam ? `<details class="sec" style="margin-top:8px"><summary>Exam questions with answers</summary><div class="prose">${mdFull(L.exam)}</div></details>` : ""}</details>`;
+  }
+  h += `</div>`;
+  if (files.length) h += `<div class="section"><div class="eyebrow">Past papers, mocks and example questions</div><div class="menu">${files.map(f => `<button data-act="openFile" data-k="${f.key}">📄 <span class="grow">${esc(f.title)}<small>${f.pages ? f.pages + " pages" : ""}</small></span>↗</button>`).join("")}</div></div>`;
+  if (hist.length) h += `<div class="section"><div class="eyebrow">Your practice results</div><div class="panel">${hist.map(x => `<div class="statrow"><span>${new Date(x.ts).toLocaleDateString("en-GB", {day: "numeric", month: "short"})}</span><b>${Math.round(x.right / x.n * 100)}%${x.pts ? ` · ${(x.right / x.n * x.pts).toFixed(1)}/${x.pts}` : ""}</b></div>`).join("")}</div></div>`;
+  h += `<div class="section"><button class="btn block" data-act="testsEditor" data-g="${g}">Edit tests & dates</button></div>`;
+  return h + `</main>` + tabs("tests");
 }
 
 // ================================================================ study sessions
@@ -622,11 +904,13 @@ function weightedMix(byGroup) {
 }
 function buildQueue(cards, mode) {
   const t = now();
+  cards = studyCards(cards);
   if (mode === "drill" || mode === "list") return cards.slice();
   const overByG = {}; cards.filter(c => isDue(c, t)).sort((a, b) => S.progress[a.id].d - S.progress[b.id].d).forEach(c => (overByG[c.g] = overByG[c.g] || []).push(c));
+  if (settings().reviewCap > 0) for (const g in overByG) overByG[g] = overByG[g].slice(0, settings().reviewCap);
   const freshByG = {};
   cards.filter(c => !S.progress[c.id]).forEach(c => (freshByG[c.g] = freshByG[c.g] || []).push(c));
-  for (const g in freshByG) { const ord = settings().order[g] || "random"; freshByG[g] = (ord === "progressive" ? freshByG[g] : interleave(freshByG[g])).slice(0, newLeft(g)); }
+  for (const g in freshByG) { const ord = settings().order[g] || "random"; freshByG[g] = (ord === "progressive" || !settings().interleave ? freshByG[g] : interleave(freshByG[g])).slice(0, newLeft(g)); }
   const over = Object.keys(overByG).length > 1 ? weightedMix(overByG) : (Object.values(overByG)[0] || []);
   const fresh = Object.keys(freshByG).length > 1 ? weightedMix(freshByG) : (Object.values(freshByG)[0] || []);
   const q = []; let i = 0, j = 0;
@@ -636,12 +920,11 @@ function buildQueue(cards, mode) {
 function startStudy(cards, mode, label, scope) {
   const q = buildQueue(cards, mode);
   const back = view.name === "caught" || view.name === "check" ? (session && session.back) : view;
-  session = {q: q.map(c => c.id), pos: 0, label, mode, revealed: false, rated: 0, dist: [0, 0, 0, 0, 0, 0], startM: mastery(scope || cards), scope: (scope || cards).map(c => c.id), t0: now(), shownAt: now(), tfPick: null, typed: "", cmdTry: null, back};
+  session = {q: q.map(c => c.id), pos: 0, label, mode, revealed: false, rated: 0, dist: [0, 0, 0, 0, 0, 0], startM: mastery(scope || cards), scope: (scope || cards).map(c => c.id), t0: now(), shownAt: now(), revealedAt: 0, tfPick: null, typed: "", cmdTry: null, back, kind: mode};
   undoBuf = null;
   go({name: q.length ? "study" : "caught"});
 }
 const curCard = () => session && BYID[session.q[session.pos]];
-// command check: placeholders like HOST, PORT, <name> accept anything; everything else must match token by token
 function cmdTokens(s) { return String(s).trim().replace(/\s+/g, " ").split(" "); }
 function cmdCompare(expected, typed) {
   const e = cmdTokens(expected), t = cmdTokens(typed), out = []; let ok = e.length === t.length;
@@ -655,19 +938,28 @@ function cmdCompare(expected, typed) {
   }
   return {ok, html: out.join(" ")};
 }
+function slideFigure(c) {
+  const l = cardLink(c.id); if (!l) return "";
+  const label = l.slide ? `Slide ${l.slide} · ${esc((((libTopic(c.t).files || []).find(f => f.key === l.deck)) || {}).title || "lecture")}` : esc(l.alt || "Figure");
+  return `<button class="slidebox" data-act="cardSlide" data-id="${c.id}" aria-label="Enlarge: ${label}"><img data-key="${l.key}" alt=""><span>${label} · tap to enlarge</span></button>`;
+}
 function vStudy() {
   const c = curCard(); if (!c) return vCheck();
   const t = TOPICS[c.t], g = GROUPS[c.g], set = settings();
   const progress = session.mode === "drill" ? session.pos / session.q.length : (session.rated % set.round) / set.round;
   const isCmd = !!c.cmd, rev = set.reverse && c.tf == null && !isCmd;
   const front = rev ? c.a : c.q, back = rev ? c.q : c.a;
-  const bm = S.meta.bm[c.id] && S.meta.bm[c.id].v, nu = noteUrl(c.t);
+  const bm = S.meta.bm[c.id] && S.meta.bm[c.id].v, nu = noteUrl(c.t), vid = (libTopic(c.t).videos || [])[0];
   let extra = "";
+  if (!session.revealed && set.aiHint) extra += `<div class="helpers"><button class="btn" data-act="aiHint" data-id="${c.id}">💡 What is it asking?</button><button class="btn" data-act="readQ" data-id="${c.id}" aria-label="Read the question aloud">🔊</button></div><div id="aiHintBox"></div>`;
   if (session.revealed) {
     if (c.tf != null && session.tfPick != null) extra += `<div class="verdict ${session.tfPick === c.tf ? "ok" : "no"}">${session.tfPick === c.tf ? "✓ Correct" : "✗ Not quite"} — it's ${c.tf ? "TRUE" : "FALSE"}</div>`;
     if (isCmd && session.cmdTry) extra += `<div class="verdict ${session.cmdTry.ok ? "ok" : "no"}">${session.cmdTry.ok ? "✓ Exact command" : "✗ Not the exact command"}</div><div class="xpl"><span class="eyebrow">You typed</span><div class="diff">${session.cmdTry.html || "<i>nothing</i>"}</div><span class="eyebrow" style="margin-top:8px">Expected</span><div class="diff">${esc(c.cmd)}</div></div>`;
     if (session.typed && !isCmd) extra += `<div class="xpl"><span class="eyebrow">Your answer</span>${md(session.typed)}</div>`;
-    extra += c.x ? `<div class="xpl"><span class="eyebrow">Why</span>${md(c.x)}</div>` : `<button class="tbtn small" data-act="edit" data-id="${c.id}" style="padding-left:0">+ Add an explanation</button>`;
+    if (c.x && set.autoX) extra += `<div class="xpl"><span class="eyebrow">Why</span>${md(c.x)}</div>`;
+    else if (c.x) extra += `<details class="sec" style="margin-top:12px"><summary>Why</summary>${md(c.x)}</details>`;
+    extra += slideFigure(c);
+    extra += `<div class="helpers"><button class="btn" data-act="aiExplain" data-id="${c.id}">✨ Explain it to me</button><button class="btn" data-act="readA" data-id="${c.id}" aria-label="Read aloud">🔊</button>${vid ? `<a class="btn" href="https://www.youtube.com/watch?v=${vid.id}" target="_blank" rel="noopener">▶ Video</a>` : ""}${!c.x ? `<button class="btn" data-act="edit" data-id="${c.id}">+ Explanation</button>` : ""}</div><div id="aiBox"></div>`;
     if (nu) extra += `<a class="note" href="${nu}">📓 Open <b>${esc(t.note.split("/").pop().replace(/-/g, " "))}</b> in Obsidian</a>`;
   }
   const gaps = session.revealed ? previewGaps(c) : null;
@@ -677,7 +969,7 @@ function vStudy() {
   else if (isCmd) dock = `<div class="row" style="gap:8px"><button class="btn grow" data-act="reveal">Show</button><button class="btn primary grow" data-act="cmdCheck" style="min-height:56px">Check command</button></div>`;
   else dock = `<button class="btn primary block" data-act="reveal" style="min-height:56px">Show answer</button>`;
   return `<div class="study"><div class="shead"><button class="icon-btn" data-act="endStudy" aria-label="End session">✕</button><div class="prog" aria-label="Round progress"><i style="width:${progress * 100}%"></i></div><span class="small muted num">${session.mode === "drill" ? (session.pos + 1) + "/" + session.q.length : (session.q.length - session.pos) + " left"}</span>${undoBuf ? `<button class="icon-btn" data-act="undo" aria-label="Undo last rating">↶</button>` : ""}<button class="icon-btn" data-act="studyMenu" aria-label="Study settings">${ICON.gear}</button></div>
-  <div class="face"><div class="meta"><span class="chip">${esc(g.title)}</span>${topicCode(c.t) ? `<span class="chip">${topicCode(c.t)}</span>` : ""}<span class="grow" style="min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(t.title)}</span>${isCmd ? `<span class="pill">type it</span>` : ""}${recallChip(c)}<button class="star" data-act="bm" data-id="${c.id}" aria-pressed="${!!bm}" aria-label="Bookmark">${bm ? "★" : "☆"}</button><button class="star" data-act="edit" data-id="${c.id}" aria-label="Edit card">✎</button></div>
+  <div class="face"><div class="meta"><span class="chip">${esc(g.title)}</span>${topicCode(c.t) ? `<span class="chip">${topicCode(c.t)}</span>` : ""}<span class="grow" style="min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(t.title)}</span>${isCmd ? `<span class="pill">type it</span>` : ""}${weakness(c) ? `<span class="pill bad">${weakness(c)}</span>` : ""}${recallChip(c)}<button class="star" data-act="bm" data-id="${c.id}" aria-pressed="${!!bm}" aria-label="Bookmark">${bm ? "★" : "☆"}</button><button class="star" data-act="edit" data-id="${c.id}" aria-label="Edit card">✎</button></div>
   <div class="q">${rev ? `<span class="eyebrow" style="display:block;margin-bottom:6px">Answer → question</span>` : ""}${md(front)}</div>
   ${session.revealed ? `<div class="a">${md(back)}</div>` : `<div class="a hidden" ${c.tf == null && !isCmd ? 'data-act="reveal"' : ""}>${c.tf != null ? "True or false?" : isCmd ? "Type the exact command below" : "Answer it in your head, then tap to reveal"}</div>`}</div>
   ${!session.revealed && isCmd ? `<input class="cmdbox" id="cmdIn" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="$ type the command" value="${esc(session.typed)}" aria-label="Type the command">` : ""}
@@ -685,9 +977,10 @@ function vStudy() {
   ${extra}
   <div class="dock">${dock}</div></div>`;
 }
-function reveal() { const tx = document.getElementById("typed") || document.getElementById("cmdIn"); if (tx) session.typed = tx.value.trim(); session.revealed = true; render(); }
-function cmdCheck() { const c = curCard(), i = document.getElementById("cmdIn"); session.typed = i ? i.value.trim() : ""; session.cmdTry = cmdCompare(c.cmd, session.typed); session.revealed = true; render(); }
+function reveal() { const tx = document.getElementById("typed") || document.getElementById("cmdIn"); if (tx) session.typed = tx.value.trim(); session.revealed = true; session.revealedAt = now(); render(); const c = curCard(); if (c && settings().autoRead) readCard(c, true); }
+function cmdCheck() { const c = curCard(), i = document.getElementById("cmdIn"); session.typed = i ? i.value.trim() : ""; session.cmdTry = cmdCompare(c.cmd, session.typed); reveal(); }
 function rate(n) {
+  if (now() - session.revealedAt < 350) return;          // the same tap that revealed the answer
   const c = curCard(), ms = now() - session.shownAt;
   const prev = S.progress[c.id] ? JSON.parse(JSON.stringify(S.progress[c.id])) : null;
   undoBuf = {id: c.id, prev, q: session.q.slice(), pos: session.pos, rated: session.rated, dist: session.dist.slice(), good: n >= 3, isNew: !prev, ms};
@@ -695,16 +988,18 @@ function rate(n) {
   if (session.mode !== "drill" && n <= 3) { const gap = {1: 3, 2: 6, 3: 12}[n]; const at = session.pos + 1 + gap; if (at <= session.q.length) session.q.splice(at, 0, c.id); else if (n <= 2) session.q.push(c.id); }
   session.pos++; session.revealed = false; session.tfPick = null; session.typed = ""; session.cmdTry = null; session.shownAt = now();
   if (navigator.vibrate) navigator.vibrate(8);
+  if (TTS.queue.length) ttsStop();
   if (session.pos >= session.q.length) return go({name: "check", done: true});
   if (session.mode !== "drill" && session.rated % settings().round === 0) return go({name: "check"});
   render(); window.scrollTo(0, 0);
+  if (settings().autoRead) { const nc = curCard(); if (nc) readCard(nc, false); }
 }
 function undo() {
   if (!undoBuf) return; const u = undoBuf; undoBuf = null;
   if (u.prev) { S.progress[u.id] = Object.assign({}, u.prev, {u: now()}); markDirty(u.id); }
   else { delete S.progress[u.id]; markDirty(u.id); }
   logReview(u.good, u.isNew, u.ms, -1);
-  Object.assign(session, {q: u.q, pos: u.pos, rated: u.rated, dist: u.dist, revealed: true, shownAt: now()});
+  Object.assign(session, {q: u.q, pos: u.pos, rated: u.rated, dist: u.dist, revealed: true, revealedAt: 0, shownAt: now()});
   persist(); go({name: "study"}); toast("Rating undone");
 }
 function readyBy(scopeCards) {
@@ -713,22 +1008,21 @@ function readyBy(scopeCards) {
   return today() + days;
 }
 function vCheck() {
-  if (!session) return vToday();
+  if (!session) return vLearn();
   const scope = session.scope.map(id => BYID[id]).filter(Boolean), L = levels(scope), m = mastery(scope);
   const done = view.done || session.pos >= session.q.length, secs = (now() - session.t0) / 1000, c = counts(scope), gain = m - session.startM;
   const title = session.mode === "drill" ? (done ? "Drill complete!" : "Drill") : done ? "Session complete" : "Checkpoint!";
   const groupsIn = [...new Set(scope.map(x => x.g))], p = groupsIn.length === 1 ? plannerNeed(groupsIn[0]) : null, rb = readyBy(scope);
-  const weak = session.mode === "drill" && done ? session.q.filter((id, i, a) => a.indexOf(id) === i && confOf(id) > 0 && confOf(id) <= 2) : [];
-  return `<div class="col" style="padding-block:calc(env(safe-area-inset-top,0px) + 24px) 40px"><div class="stack" style="align-items:center;text-align:center"><h1>${title}</h1><div class="muted small">${esc(session.label)} · ${plural(scope.length, "card")} in mix</div>${ring(L, 210, (m * 100).toFixed(1) + "%", "Mastery")}</div>
-  <div style="margin-top:16px">${session.mode === "drill" ? `<div class="statrow"><span>Change in mastery</span><b>${gain >= 0 ? "+" : ""}${(gain * 100).toFixed(1)}%</b></div><div class="statrow"><span>Time spent</span><b>${fmtDur(secs)}</b></div>${weak.length ? `<div class="statrow"><span>Rated 1–2</span><b>${weak.length}</b></div>` : ""}`
-    : `<div class="statrow"><span>This session</span><b>${gain >= 0 ? "+" : ""}${(gain * 100).toFixed(1)}% · ${plural(session.rated, "card")} · ${fmtDur(secs)}</b></div><div class="statrow"><span>Overdue</span><b>${c.over}</b></div><div class="statrow"><span>New cards left</span><b>${c.fresh}</b></div><div class="statrow"><span>${p ? "Every " + esc(p.test.title) + " card seen by" : "Every card seen by"}</span><b>${c.fresh ? fmtDate(rb) + (p ? (rb <= p.day - 3 ? " ✓" : " ⚠️") : "") : "done ✓"}</b></div>`}</div>
-  <div class="stack" style="margin-top:18px"><div class="row" style="gap:10px"><button class="btn grow" data-act="endStudy">Done</button>${done ? "" : `<button class="btn primary grow" data-act="continue">${settings().round} more cards</button>`}</div>${weak.length ? `<button class="btn block" data-act="studyWeak">Study the ${weak.length} cards rated 1–2</button>` : ""}</div></div>`;
+  const weak = session.q.filter((id, i, a) => a.indexOf(id) === i && BYID[id] && weakness(BYID[id]));
+  return `<div class="col" style="padding-block:calc(env(safe-area-inset-top,0px) + 24px) 40px"><div class="stack" style="align-items:center;text-align:center"><h1>${title}</h1><div class="muted small">${esc(session.label)} · ${plural(scope.length, "card")} in mix</div>${ring(L, 200, (m * 100).toFixed(1) + "%", "Mastery")}</div>
+  <div style="margin-top:16px"><div class="statrow"><span>This session</span><b>${gain >= 0 ? "+" : ""}${(gain * 100).toFixed(1)}% · ${plural(session.rated, "card")} · ${fmtDur(secs)}</b></div><div class="statrow"><span>Still don't know (in this session)</span><b>${weak.length}</b></div><div class="statrow"><span>Due</span><b>${c.over}</b></div><div class="statrow"><span>New cards left</span><b>${c.fresh}</b></div><div class="statrow"><span>${p ? "Every " + esc(p.test.title) + " card seen by" : "Every card seen by"}</span><b>${c.fresh ? fmtDate(rb) + (p ? (rb <= p.day - (settings().plannerDays || 3) ? " ✓" : " ⚠️") : "") : "done ✓"}</b></div></div>
+  <div class="stack" style="margin-top:18px"><div class="row" style="gap:10px"><button class="btn grow" data-act="endStudy">Done</button>${done ? "" : `<button class="btn primary grow" data-act="continue">${settings().round} more cards</button>`}</div>${weak.length ? `<button class="btn block" data-act="studyWeakSession">Go over the ${weak.length} I don't know</button>` : ""}</div></div>`;
 }
 function vCaught() {
   const scope = (session ? session.scope : []).map(id => BYID[id]).filter(Boolean), m = mastery(scope), c = counts(scope);
-  return `<div class="col" style="padding-block:calc(env(safe-area-inset-top,0px) + 30px) 40px"><div class="stack" style="align-items:center;text-align:center"><h1>You're caught up!</h1><p class="muted">${c.fresh ? "Nothing is overdue and today's new cards are done." : "You've seen every card here and nothing is overdue."}</p>${ring(levels(scope), 190, (m * 100).toFixed(1) + "%", "Mastery")}</div>
-  <div style="margin-top:16px"><div class="statrow"><span>New cards left</span><b>${c.fresh}</b></div><div class="statrow"><span>Next card due</span><b>${nextDueText(scope)}</b></div></div>
-  <div class="stack" style="margin-top:18px"><button class="btn primary block" data-act="anyway">Study ${settings().round} cards anyway</button><button class="btn block" data-act="endStudy">Take a break</button></div></div>`;
+  return `<div class="col" style="padding-block:calc(env(safe-area-inset-top,0px) + 30px) 40px"><div class="stack" style="align-items:center;text-align:center"><h1>You're caught up!</h1><p class="muted">${c.fresh ? "Nothing is due and today's new cards are done." : "You've seen every card here and nothing is due."}</p>${ring(levels(scope), 180, (m * 100).toFixed(1) + "%", "Mastery")}</div>
+  <div style="margin-top:16px"><div class="statrow"><span>New cards left</span><b>${c.fresh}</b></div><div class="statrow"><span>Don't know</span><b>${c.weak}</b></div><div class="statrow"><span>Next card due</span><b>${nextDueText(scope)}</b></div></div>
+  <div class="stack" style="margin-top:18px"><button class="btn primary block" data-act="anyway">Study ${settings().round} cards anyway</button>${c.weak ? `<button class="btn block" data-act="studyIds" data-ids="${weakCards(scope).map(x => x.id).join(",")}" data-label="Weak cards">Go over ${c.weak} weak cards</button>` : ""}<button class="btn block" data-act="endStudy">Take a break</button></div></div>`;
 }
 function nextDueText(scope) { let best = Infinity; for (const c of scope) { const s = S.progress[c.id]; if (s && s.d < best) best = s.d; } if (best === Infinity) return "—"; const mins = (best - now()) / MIN; return mins <= 0 ? "now" : "in " + fmtGap(mins); }
 
@@ -743,7 +1037,6 @@ function buildQuiz(g, title, kind, topics, n, min, pts) {
     if (c.tf != null) return {id: c.id, type: "tf"};
     if (c.cmd) return {id: c.id, type: "cmd"};
     if (settings().qstyle !== "self" && c.a.length <= 220) {
-      // wrong options of a similar length, so the length doesn't give the answer away
       const cand = (BYGROUP[c.g] || []).filter(o => o.id !== c.id && o.tf == null && !o.cmd && o.a.length <= 220 && o.a.length >= c.a.length * 0.6 && o.a.length <= c.a.length * 1.6 + 10 && fold(o.a) !== fold(c.a));
       const near = l => shuffle(l.slice().sort((a, b) => Math.abs(a.a.length - c.a.length) - Math.abs(b.a.length - c.a.length)).slice(0, 8));
       const ds = []; for (const o of near(cand.filter(o => o.t === c.t)).concat(near(cand.filter(o => o.t !== c.t)))) { if (ds.length >= 3) break; if (!ds.some(x => fold(x) === fold(o.a))) ds.push(o.a); }
@@ -765,7 +1058,7 @@ function vTest() {
   else if (Q.type === "cmd") body = answered ? `<div class="xpl"><span class="eyebrow">You typed</span><div class="diff">${cmdCompare(c.cmd, quiz.typed[quiz.i]).html || "<i>nothing</i>"}</div>${fb ? `<span class="eyebrow" style="margin-top:8px">Expected</span><div class="diff">${esc(c.cmd)}</div>` : ""}</div>` : `<input class="cmdbox" id="qcmd" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="$ type the command"><button class="btn primary block" data-act="qcmd" style="margin-top:8px">Submit</button>`;
   else body = quiz.revealed || fb ? `<div class="face"><div class="a">${md(c.a)}</div></div>${answered ? "" : `<div class="tf" style="margin-top:10px"><button class="btn" data-act="ans" data-v="0">✗ I missed it</button><button class="btn" data-act="ans" data-v="1">✓ I got it</button></div>`}` : `<p class="small muted">Answer in your head or on paper, then check.</p><button class="btn block" data-act="qreveal">Show the answer</button>`;
   let after = "";
-  if (fb) { const ok = isRight(Q, a); after = `<div class="verdict ${ok ? "ok" : "no"}">${ok ? "✓ Correct" : "✗ Wrong"}${Q.type === "tf" ? " — it's " + (c.tf ? "TRUE" : "FALSE") : ""}</div>${Q.type === "mc" && !ok ? `<div class="xpl"><span class="eyebrow">Answer</span>${md(c.a)}</div>` : ""}${c.x ? `<div class="xpl"><span class="eyebrow">Why</span>${md(c.x)}</div>` : ""}`; }
+  if (fb) { const ok = isRight(Q, a); after = `<div class="verdict ${ok ? "ok" : "no"}">${ok ? "✓ Correct" : "✗ Wrong"}${Q.type === "tf" ? " — it's " + (c.tf ? "TRUE" : "FALSE") : ""}</div>${Q.type === "mc" && !ok ? `<div class="xpl"><span class="eyebrow">Answer</span>${md(c.a)}</div>` : ""}${c.x ? `<div class="xpl"><span class="eyebrow">Why</span>${md(c.x)}</div>` : ""}${!ok ? slideFigure(c) : ""}`; }
   const last = quiz.i === quiz.qs.length - 1;
   return `<div class="study"><div class="shead"><button class="icon-btn" data-act="quitTest" aria-label="Finish test">✕</button><div class="grow"><div class="small muted">${esc(GROUPS[quiz.g].title)} · ${esc(quiz.title)}</div><div class="prog"><i style="width:${quiz.i / quiz.qs.length * 100}%"></i></div></div><span class="small num muted">${quiz.i + 1}/${quiz.qs.length}</span><span class="timer ${left < 60 ? "low" : ""}" id="timer">${fmtTime(left)}</span></div>
   <div class="face"><div class="meta"><span class="chip">${esc(GROUPS[c.g].title)}</span>${topicCode(c.t) ? `<span class="chip">${topicCode(c.t)}</span>` : ""}<span>${esc(TOPICS[c.t].title)}</span><span class="pill">${{tf: "true / false", mc: "multiple choice", cmd: "type the command", self: "self-check"}[Q.type]}</span></div><div class="q">${md(c.q)}</div></div>
@@ -787,13 +1080,14 @@ function vResult() {
   return `<div class="col" style="padding-block:calc(env(safe-area-inset-top,0px) + 24px) 40px"><div class="stack"><div class="eyebrow">${esc(GROUPS[r.g].title)} · ${r.kind === "exam" ? "exam" : "test"} result</div><h1>${esc(r.title)}</h1>
   <div class="panel stack"><div class="row between"><div><div style="font:700 3rem/1 var(--display)" class="num">${Math.round(pct * 100)}%</div><div class="small muted num">${r.right} of ${r.n} correct · ${fmtTime(r.secs)}${prev.length ? " · before: " + prev.join(", ") : ""}</div></div>${r.pts ? `<span class="pill num" style="background:var(--accent-soft);color:var(--accent)">≈ ${(pct * r.pts).toFixed(1)} / ${r.pts} pts</span>` : ""}</div>
   ${Object.entries(r.per).sort((a, b) => a[1][0] / a[1][1] - b[1][0] / b[1][1]).map(([t, [ok, n]]) => `<div><div class="row between small"><span>${topicCode(t) ? `<span class="chip">${topicCode(t)}</span> ` : ""}${esc(TOPICS[t] ? TOPICS[t].title : t)}</span><span class="num muted">${ok}/${n}</span></div><div class="cbar"><i style="width:${ok / n * 100}%;background:${ok / n >= .7 ? "var(--c4)" : ok / n >= .5 ? "var(--c3)" : "var(--c1)"}"></i></div></div>`).join("")}</div>
-  ${r.missed.length ? `<button class="btn primary block" data-act="studyMissed">Study the ${r.missed.length} missed cards</button>` : `<p>Clean sheet. 🎯</p>`}<button class="btn block" data-act="tab" data-v="today">Back to Today</button>
-  ${r.missed.length ? `<div class="section"><div class="eyebrow">What you missed</div>${r.missed.map(id => { const c = BYID[id]; return c ? `<div class="panel"><div style="font-weight:700">${md(c.q)}</div><div style="margin-top:6px">${md(c.cmd ? "`" + c.cmd + "`" : c.a)}</div>${c.x ? `<div class="xpl"><span class="eyebrow">Why</span>${md(c.x)}</div>` : ""}</div>` : ""; }).join("")}</div>` : ""}</div></div>`;
+  ${r.missed.length ? `<button class="btn primary block" data-act="studyMissed">Study the ${r.missed.length} missed cards</button>` : `<p>Clean sheet. 🎯</p>`}<button class="btn block" data-act="tab" data-v="learn">Back to Learn</button>
+  ${r.missed.length ? `<div class="section"><div class="eyebrow">What you missed</div>${r.missed.map(id => { const c = BYID[id]; return c ? `<div class="panel"><div style="font-weight:700">${md(c.q)}</div><div style="margin-top:6px">${md(c.cmd ? "`" + c.cmd + "`" : c.a)}</div>${c.x ? `<div class="xpl"><span class="eyebrow">Why</span>${md(c.x)}</div>` : ""}${slideFigure(c)}</div>` : ""; }).join("")}</div>` : ""}</div></div>`;
 }
 
 // ================================================================ search & cards
-function listCards(cards, words) { return cards.map(c => { const s = S.progress[c.id]; const r = recallOf(c); return `<button class="hit" data-act="card" data-id="${c.id}" style="border-left-color:var(--c${s ? s.c : 0})"><div class="row small muted" style="gap:6px;margin-bottom:4px"><span class="chip">${esc(GROUPS[c.g].title)}</span>${topicCode(c.t) ? `<span class="chip">${topicCode(c.t)}</span>` : ""}<span class="grow" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(TOPICS[c.t].title)}</span>${r !== null ? `<span class="num">${Math.round(r * 100)}%</span>` : ""}${S.meta.bm[c.id] && S.meta.bm[c.id].v ? "★" : ""}</div><div class="qq">${md(c.q, words)}</div><div class="aa">${md(c.cmd ? "`" + c.cmd + "`" : c.a, words)}</div></button>`; }).join(""); }
-const FLAGS = [["bm", "★ Bookmarked"], ["over", "Overdue"], ["nox", "No explanation"], ["edited", "Edited by me"], ["cmd", "Commands"]];
+function listCards(cards, words) { return cards.map(c => { const s = S.progress[c.id]; const r = recallOf(c); return `<button class="hit" data-act="card" data-id="${c.id}" style="border-left-color:var(--c${s ? s.c : 0})"><div class="row small muted" style="gap:6px;margin-bottom:4px"><span class="chip">${esc(GROUPS[c.g].title)}</span>${topicCode(c.t) ? `<span class="chip">${topicCode(c.t)}</span>` : ""}<span class="grow" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(TOPICS[c.t].title)}</span>${weakness(c) ? `<span class="t-bad">${weakness(c)}</span>` : ""}${r !== null ? `<span class="num">${Math.round(r * 100)}%</span>` : ""}${cardLink(c.id) ? "🖼" : ""}${S.meta.bm[c.id] && S.meta.bm[c.id].v ? "★" : ""}</div><div class="qq">${md(c.q, words)}</div><div class="aa">${md(c.cmd ? "`" + c.cmd + "`" : c.a, words)}</div></button>`; }).join(""); }
+const FLAGS = [["weak", "Don't know"], ["bm", "★ Bookmarked"], ["over", "Due"], ["nox", "No explanation"], ["img", "With slide"], ["edited", "Edited by me"], ["cmd", "Commands"]];
+let lastHits = [];
 function vSearch() {
   const qv = view.q || "", gf = view.gf || "all", lv = view.lv || [], fl = view.fl || [], words = fold(qv).split(/\s+/).filter(Boolean), t = now();
   const filtering = words.length || lv.length || fl.length || gf !== "all";
@@ -801,65 +1095,108 @@ function vSearch() {
   if (filtering) for (const c of CARDS) {
     if (gf !== "all" && c.g !== gf) continue;
     if (lv.length && !lv.includes(confOf(c.id))) continue;
+    if (fl.includes("weak") && !weakness(c)) continue;
     if (fl.includes("bm") && !(S.meta.bm[c.id] && S.meta.bm[c.id].v)) continue;
     if (fl.includes("over") && !isDue(c, t)) continue;
     if (fl.includes("nox") && c.x) continue;
+    if (fl.includes("img") && !cardLink(c.id)) continue;
     if (fl.includes("edited") && !c.edited && !c.mine) continue;
     if (fl.includes("cmd") && !c.cmd) continue;
     if (words.length) { const hay = fold(c.q + " " + c.a + " " + (c.x || "") + " " + (c.cmd || "") + " " + (c.tags || []).join(" ") + " " + TOPICS[c.t].title); if (!words.every(w => hay.includes(w))) continue; }
     hits.push(c); if (hits.length >= 150) break;
   }
   lastHits = hits;
-  return `<main class="col" style="padding-top:env(safe-area-inset-top,0px)"><div class="search"><input id="q" type="search" placeholder="Search questions, answers, explanations" value="${esc(qv)}" autocomplete="off" enterkeyhint="search" aria-label="Search cards">
+  // topics whose notes mention the words
+  const topicHits = words.length ? Object.entries((LIB && LIB.topics) || {}).filter(([tid, T]) => TOPICS[tid] && (gf === "all" || TOPICS[tid].g === gf) && words.every(w => fold(T.title + " " + (T.summary || "") + " " + (T.remember || "") + " " + (T.sections || []).map(s => s.h + " " + s.md).join(" ")).includes(w))).slice(0, 8) : [];
+  return `<main class="col" style="padding-top:env(safe-area-inset-top,0px)"><div class="search"><input id="q" type="search" placeholder="Search cards and notes" value="${esc(qv)}" autocomplete="off" enterkeyhint="search" aria-label="Search">
   <div class="filters" aria-label="Subject">${[["all", "All"]].concat(DECK.groups.map(g => [g.id, g.title])).map(([k, l]) => `<button data-act="gf" data-v="${k}" aria-pressed="${gf === k}">${l}</button>`).join("")}</div>
-  <div class="filters" aria-label="Last rating">${[0, 1, 2, 3, 4, 5].map(k => `<button data-act="lv" data-v="${k}" aria-pressed="${lv.includes(k)}"><span class="dot" style="background:var(--c${k})"></span>${k === 0 ? "New" : k}</button>`).join("")}${FLAGS.map(([k, l]) => `<button data-act="fl" data-v="${k}" aria-pressed="${fl.includes(k)}">${l}</button>`).join("")}</div></div>
-  <div class="stack" style="gap:8px">${!filtering ? `<p class="muted">Type a word or two, or pick filters: e.g. <i>bresenham</i>, <i>sigmoid derivative</i>, rated 1–2 in GRK, or BSI commands.</p>` : hits.length ? `<div class="row between"><span class="small muted num">${hits.length >= 150 ? "First 150 matches" : plural(hits.length, "match").replace("matchs", "matches")}</span><button class="btn sm" data-act="studyHits">Study these</button></div>` + listCards(hits, words) : `<p class="muted">No cards match.</p>`}</div></main>` + tabs("search");
+  <div class="filters" aria-label="Filters">${FLAGS.map(([k, l]) => `<button data-act="fl" data-v="${k}" aria-pressed="${fl.includes(k)}">${l}</button>`).join("")}${[0, 1, 2, 3, 4, 5].map(k => `<button data-act="lv" data-v="${k}" aria-pressed="${lv.includes(k)}"><span class="dot" style="background:var(--c${k})"></span>${k === 0 ? "New" : k}</button>`).join("")}</div></div>
+  ${topicHits.length ? `<div class="section" style="margin-top:6px"><div class="eyebrow">In your notes</div><div class="menu">${topicHits.map(([tid]) => `<button data-act="topic" data-t="${tid}"><span class="chip">${esc(GROUPS[TOPICS[tid].g].title)}</span><span class="grow">${esc(TOPICS[tid].title)}</span>›</button>`).join("")}</div></div>` : ""}
+  <div class="stack" style="gap:8px;margin-top:10px">${!filtering ? `<p class="muted">Type a word or two, or pick filters: e.g. <i>bresenham</i>, <i>sigmoid derivative</i>, "Don't know" in GRK, or BSI commands.</p>` : hits.length ? `<div class="row between"><span class="small muted num">${hits.length >= 150 ? "First 150 matches" : plural(hits.length, "match", "matches")}</span><button class="btn sm" data-act="studyHits">Study these</button></div>` + listCards(hits, words) : `<p class="muted">No cards match.</p>`}</div></main>` + tabs("search");
 }
-let lastHits = [];
 function cardSheet(id) {
   const c = BYID[id], s = S.progress[id], bm = S.meta.bm[id] && S.meta.bm[id].v, nu = noteUrl(c.t), r = recallOf(c);
   const hist = s && s.h ? s.h.map(([ts, k]) => `<span class="pill" title="${new Date(ts * 1000).toLocaleString("en-GB")}"><span class="dot" style="background:var(--c${k})"></span>${k}</span>`).join(" ") : "";
-  openSheet(`<div class="stack"><div class="row small muted" style="gap:6px"><span class="chip">${esc(GROUPS[c.g].title)}</span>${topicCode(c.t) ? `<span class="chip">${topicCode(c.t)}</span>` : ""}<span class="grow">${esc(TOPICS[c.t].title)}</span><button class="star" data-act="bm" data-id="${id}" aria-pressed="${!!bm}" aria-label="Bookmark">${bm ? "★" : "☆"}</button></div>
+  openSheet(`<div class="stack"><div class="row small muted" style="gap:6px"><span class="chip">${esc(GROUPS[c.g].title)}</span>${topicCode(c.t) ? `<span class="chip">${topicCode(c.t)}</span>` : ""}<button class="grow back" style="text-align:left;color:var(--accent);min-height:0" data-act="topic" data-t="${c.t}">${esc(TOPICS[c.t].title)} ›</button><button class="star" data-act="bm" data-id="${id}" aria-pressed="${!!bm}" aria-label="Bookmark">${bm ? "★" : "☆"}</button></div>
   <h2 style="font-family:var(--body)">${md(c.q)}</h2><div class="face"><div class="a">${md(c.cmd ? "`" + c.cmd + "`" + (c.a.trim() !== "`" + c.cmd + "`" ? "\n" + c.a : "") : c.a)}</div></div>${c.x ? `<div class="xpl"><span class="eyebrow">Why</span>${md(c.x)}</div>` : ""}
+  ${slideFigure(c)}<div class="helpers"><button class="btn" data-act="aiExplain" data-id="${id}">✨ Explain it to me</button><button class="btn" data-act="readA" data-id="${id}">🔊 Listen</button></div><div id="aiBox"></div>
   ${nu ? `<a class="note" href="${nu}">📓 Open the note in Obsidian</a>` : ""}
-  <div class="panel small stack" style="gap:6px"><div>${s ? `Last rating <b>${s.c}/5</b> · ${plural(s.r, "review")} · recall now <b>${Math.round(r * 100)}%</b> · ${isDue(c, now()) ? "<b>overdue</b>" : "next " + nextDueText([c])}` : "Not studied yet"}</div>${hist ? `<div class="row" style="gap:4px">History: ${hist}</div>` : ""}<div class="muted">${esc(c.src || "")}${c.edited ? " · edited by you" : ""}${(c.tags || []).length ? " · " + esc(c.tags.join(", ")) : ""}</div></div>
+  <div class="panel small stack" style="gap:6px"><div>${s ? `Last rating <b>${s.c}/5</b> · ${plural(s.r, "review")} · ${plural(s.l || 0, "lapse")} · recall now <b>${Math.round(r * 100)}%</b> · ${isDue(c, now()) ? "<b>due</b>" : "next " + nextDueText([c])}` : "Not studied yet"}</div>${hist ? `<div class="row" style="gap:4px">History: ${hist}</div>` : ""}<div class="muted">${esc(c.src || "")}${c.edited ? " · edited by you" : ""}${(c.tags || []).length ? " · " + esc(c.tags.join(", ")) : ""}</div></div>
   <div class="row" style="gap:8px"><button class="btn grow" data-act="edit" data-id="${id}">Edit</button><button class="btn primary grow" data-act="studyOne" data-id="${id}">Study now</button></div>${s ? `<button class="btn ghost block" data-act="resetCard" data-id="${id}">Forget this card (start over)</button>` : ""}<button class="btn ghost block" data-act="closeSheet">Close</button></div>`);
 }
 function editSheet(id) {
   const c = BYID[id];
   openSheet(`<form class="stack" id="editForm" data-id="${id}"><h2>Edit card</h2>${c.mine ? `<div class="field"><label for="eq">Question</label><textarea id="eq">${esc(c.q)}</textarea></div>` : `<p class="small muted">${md(c.q)}</p>`}
   <div class="field"><label for="ea">Answer</label><textarea id="ea">${esc(c.a)}</textarea></div><div class="field"><label for="ex">Explanation (shown after answering)</label><textarea id="ex" placeholder="Why is this the answer? A tip, a worked number, a trap…">${esc(c.x || "")}</textarea></div>
+  <button type="button" class="btn sm" data-act="aiDraft" data-id="${id}">✨ Draft an explanation with AI</button>
   <div class="row" style="gap:8px"><button type="submit" class="btn primary grow">Save</button><button type="button" class="btn" data-act="closeSheet">Cancel</button></div>
   ${c.edited ? `<button type="button" class="btn ghost block" data-act="resetEdit" data-id="${id}">Undo my edits</button>` : ""}${c.mine ? `<button type="button" class="btn ghost block" data-act="delCard" data-id="${id}" style="color:var(--bad)">Delete this card</button>` : ""}</form>`);
 }
-function addSheet(gid) {
+function addSheet(gid, tid) {
   const g = GROUPS[gid];
-  openSheet(`<form class="stack" id="addForm" data-g="${gid}"><h2>New ${esc(g.title)} card</h2><div class="field"><label for="at">Topic</label><select id="at">${g.topics.map(t => `<option value="${t.id}">${esc(t.title)}</option>`).join("")}</select></div>
+  openSheet(`<form class="stack" id="addForm" data-g="${gid}"><h2>New ${esc(g.title)} card</h2><div class="field"><label for="at">Topic</label><select id="at">${g.topics.map(t => `<option value="${t.id}" ${t.id === tid ? "selected" : ""}>${esc(t.title)}</option>`).join("")}</select></div>
   <div class="field"><label for="aq">Question</label><textarea id="aq" required></textarea></div><div class="field"><label for="aa">Answer</label><textarea id="aa" required></textarea></div><div class="field"><label for="ax">Explanation (optional)</label><textarea id="ax"></textarea></div>
   <div class="field"><label for="atf">Type</label><select id="atf"><option value="">Question & answer</option><option value="1">True/false — TRUE</option><option value="0">True/false — FALSE</option><option value="cmd">Command — type it exactly (answer = the command)</option></select></div>
   <div class="row" style="gap:8px"><button type="submit" class="btn primary grow">Add card</button><button type="button" class="btn" data-act="closeSheet">Cancel</button></div></form>`);
 }
 function mixSheet() {
-  openSheet(`<div class="stack"><h2>Your study mix</h2><p class="small muted">How much of each subject goes into the main Start session. Status counts too: Exam soon ×2, Maintaining ×½, Paused = out. Mixing subjects helps memory.</p>
-  ${activeGroups().map(g => { const m = settings().mix[g]; const v = m == null ? 100 : m; return `<div class="slider"><b>${esc(GROUPS[g].title)}</b><input type="range" min="0" max="100" step="10" value="${v}" data-mix="${g}" aria-label="${esc(GROUPS[g].name)} share"><span class="num small" id="mx-${g}">${v}%</span></div>`; }).join("")}
+  openSheet(`<div class="stack"><h2>Your study mix</h2><p class="small muted">How much of each subject goes into "Start today's mix". Status counts too: Exam soon ×2, Maintaining ×½, Paused = out.</p>
+  ${orderedGroups().filter(g => statusOf(g) !== "paused").map(g => { const m = settings().mix[g]; const v = m == null ? 100 : m; return `<div class="slider"><b>${esc(GROUPS[g].title)}</b><input type="range" min="0" max="100" step="10" value="${v}" data-mix="${g}" aria-label="${esc(GROUPS[g].name)} share"><span class="num small" id="mx-${g}">${v}%</span></div>`; }).join("")}
   <div class="row" style="gap:8px"><button class="btn grow" data-act="mixReset">Reset</button><button class="btn primary grow" data-act="studyPlanClose">Start</button></div></div>`);
 }
 function statusSheet(g) {
-  openSheet(`<div class="stack"><h2>${esc(GROUPS[g].name)}: status</h2>${Object.entries(STATUS).map(([k, l]) => `<button class="opt ${statusOf(g) === k ? "sel" : ""}" data-act="setStatus" data-g="${g}" data-v="${k}"><b>${l}</b> <span class="small muted">— ${{exam: "most of the mix, exam planner raises new cards", active: "normal daily study", maintain: "few new cards, keeps old ones fresh", paused: "hidden from Today and the mix"}[k]}</span></button>`).join("")}<button class="btn ghost block" data-act="closeSheet">Close</button></div>`);
+  openSheet(`<div class="stack"><h2>${esc(GROUPS[g].name)}: status</h2><div class="menu">${Object.entries(STATUS).map(([k, l]) => `<button data-act="setStatus" data-g="${g}" data-v="${k}">${statusOf(g) === k ? "✓" : "&nbsp;&nbsp;"} <span class="grow">${l}<small>${STATUS_HINT[k]}</small></span></button>`).join("")}</div><button class="btn ghost block" data-act="closeSheet">Close</button></div>`);
 }
-function drillSheet(gid) {
-  const set = selected(gid), cards = cardsOfTopics(set), L = levels(cards);
-  openSheet(`<div class="stack"><h2>Prepare to drill</h2><p class="small muted">One pass through the ticked topics in random order. No repeats; your ratings still count. Good as a pretest, or a last run-through the night before.</p>
-  <div style="align-self:center">${ring(L, 160, (mastery(cards) * 100).toFixed(0) + "%", "Mastery")}</div>
+function subjectMenu(g) {
+  const G = GROUPS[g], hidden = G.topics.filter(t => hiddenTopic(t.id)).length;
+  openSheet(`<div class="stack"><h2>${esc(G.name)}</h2><div class="menu">
+  <button data-act="studyGroup" data-g="${g}">▸ <span class="grow">Study the whole subject<small>due cards first, then new ones</small></span></button>
+  <button data-act="weakStudy" data-g="${g}">⚠ <span class="grow">Go over what I don't know<small>${weakCards(BYGROUP[g] || []).length} cards</small></span></button>
+  <button data-act="selectModeG" data-g="${g}">☑ <span class="grow">Combine topics<small>pick several topics and study, drill or test them together</small></span></button>
+  <button data-act="drillGroup" data-g="${g}">⚡ <span class="grow">Drill<small>one pass, no repeats, choose which ratings</small></span></button>
+  <button data-act="statusSheet" data-g="${g}">◐ <span class="grow">Status: ${STATUS[statusOf(g)]}<small>${STATUS_HINT[statusOf(g)]}</small></span></button>
+  <button data-act="testsEditor" data-g="${g}">📅 <span class="grow">Tests & dates</span></button>
+  <button data-act="orderSheet" data-g="${g}">⇅ <span class="grow">New cards order: ${(settings().order[g] || "random") === "progressive" ? "lecture by lecture" : "mixed topics"}</span></button>
+  <button data-act="hideSheet" data-g="${g}">👁 <span class="grow">Show or hide topics<small>${hidden ? hidden + " hidden" : "all topics shown"}</small></span></button>
+  <button data-act="addCard" data-g="${g}">＋ <span class="grow">Add a card</span></button>
+  <button data-act="markKnownG" data-g="${g}">✓ <span class="grow">Mark cards I've never studied as known…<small>for material you already know well</small></span></button>
+  <button class="danger" data-act="resetG" data-g="${g}">↺ <span class="grow">Reset progress…</span></button></div><button class="btn ghost block" data-act="closeSheet">Close</button></div>`);
+}
+function topicMenu(tid) {
+  const T = TOPICS[tid], hid = hiddenTopic(tid), nu = noteUrl(tid);
+  openSheet(`<div class="stack"><h2>${esc(T.title)}</h2><div class="menu">
+  <button data-act="drillTopic" data-t="${tid}">⚡ <span class="grow">Drill this topic</span></button>
+  <button data-act="testTopic" data-t="${tid}">✎ <span class="grow">Quick test on this topic<small>10 questions, feedback after each</small></span></button>
+  <button data-act="combineWith" data-t="${tid}">☑ <span class="grow">Combine with other topics</span></button>
+  <button data-act="hideTopic" data-t="${tid}">👁 <span class="grow">${hid ? "Show this topic again" : "Hide from study and the mix"}</span></button>
+  <button data-act="addCard" data-g="${T.g}" data-t="${tid}">＋ <span class="grow">Add a card</span></button>
+  ${nu ? `<button data-act="openNote" data-t="${tid}">📓 <span class="grow">Open the note in Obsidian</span></button>` : ""}
+  <button data-act="markKnownT" data-t="${tid}">✓ <span class="grow">Mark unseen cards as known…</span></button>
+  <button class="danger" data-act="resetT" data-t="${tid}">↺ <span class="grow">Reset this topic's progress…</span></button></div><button class="btn ghost block" data-act="closeSheet">Close</button></div>`);
+}
+function confirmSheet(title, text, act, ds) {
+  openSheet(`<div class="stack"><h2>${esc(title)}</h2><p class="muted">${esc(text)}</p><button class="btn primary block" data-act="${act}" ${Object.entries(ds).map(([k, v]) => `data-${k}="${esc(v)}"`).join(" ")}>${esc(title)}</button><button class="btn ghost block" data-act="closeSheet">Cancel</button></div>`);
+}
+function drillSheet(cards, label) {
+  const L = levels(cards); window._drill = {cards, label};
+  openSheet(`<div class="stack"><h2>Prepare to drill</h2><p class="small muted">One pass in random order. No repeats; your ratings still count. Good as a pretest, or a last run-through the night before.</p>
+  <div style="align-self:center">${ring(L, 150, (mastery(cards) * 100).toFixed(0) + "%", "Mastery")}</div>
   <div class="field"><label>Include cards rated</label><div class="levels">${[0, 1, 2, 3, 4, 5].map(k => `<label><input type="checkbox" data-lvl="${k}" ${k === 5 ? "" : "checked"}><span class="dot" style="background:var(--c${k})"></span>${k === 0 ? "Not started" : k} <span class="muted small num">${L[k]}</span></label>`).join("")}</div></div>
-  <button class="btn primary block" data-act="drillGo" data-g="${gid}">⚡ Drill</button><button class="btn ghost block" data-act="closeSheet">Cancel</button></div>`);
+  <button class="btn primary block" data-act="drillGo">⚡ Drill</button><button class="btn ghost block" data-act="closeSheet">Cancel</button></div>`);
 }
-function testSheet(gid) {
-  const set = selected(gid), n = cardsOfTopics(set).length;
-  openSheet(`<form class="stack" id="testForm" data-g="${gid}"><h2>Test from ${plural(set.size, "topic")}</h2><p class="small muted">${n} cards. True/false and commands are auto-marked, short answers become multiple choice, long ones are self-checked.</p>
+function testSheet(topics, g) {
+  const n = cardsOfTopics(new Set(topics)).length; window._qt = {topics, g};
+  openSheet(`<form class="stack" id="testForm"><h2>Test from ${plural(topics.length, "topic")}</h2><p class="small muted">${n} cards. True/false and commands are auto-marked, short answers become multiple choice, long ones are self-checked.</p>
   <div class="field"><label for="tn">Questions</label><input id="tn" type="number" min="5" max="${n}" value="${Math.min(20, n)}" inputmode="numeric"></div><div class="field"><label for="tm">Minutes</label><input id="tm" type="number" min="1" max="240" value="${Math.max(5, Math.round(Math.min(20, n) * 1.5))}" inputmode="numeric"></div>
   <div class="field"><label>Mode</label><div class="seg full"><button type="button" data-act="seg" data-v="test" aria-pressed="true">Test · feedback</button><button type="button" data-act="seg" data-v="exam" aria-pressed="false">Exam · at the end</button></div></div>
   <button type="submit" class="btn primary block">Start</button><button type="button" class="btn ghost block" data-act="closeSheet">Cancel</button></form>`);
+}
+function hideSheet(g) {
+  openSheet(`<div class="stack"><h2>Show or hide topics</h2><p class="small muted">Hidden topics stay in the deck but leave the mix, "What you don't know" and study sessions.</p><div class="panel" style="padding:4px 14px">${GROUPS[g].topics.map(t => `<label class="toggle"><span>${topicCode(t.id) ? `<span class="chip">${topicCode(t.id)}</span> ` : ""}${esc(t.title)}</span><input type="checkbox" data-hide="${t.id}" ${hiddenTopic(t.id) ? "" : "checked"}></label>`).join("")}</div><button class="btn ghost block" data-act="closeSheet">Done</button></div>`);
+}
+function orderSheet(g) {
+  const o = settings().order[g] || "random";
+  openSheet(`<div class="stack"><h2>Order of new cards</h2><div class="menu"><button data-act="order" data-g="${g}" data-v="progressive">${o === "progressive" ? "✓" : "&nbsp;&nbsp;"} <span class="grow">Lecture by lecture<small>finish one topic's new cards before the next</small></span></button><button data-act="order" data-g="${g}" data-v="random">${o !== "progressive" ? "✓" : "&nbsp;&nbsp;"} <span class="grow">Mixed topics<small>interleaving helps memory and tells similar ideas apart</small></span></button></div><button class="btn ghost block" data-act="closeSheet">Close</button></div>`);
 }
 function testsEditor(gid) {
   const list = testsOf(gid);
@@ -872,22 +1209,25 @@ function testsEditor(gid) {
 function readTestsForm(gid) {
   const base = JSON.parse(JSON.stringify(testsOf(gid)));
   layer.querySelectorAll("[data-k]").forEach(el => { const t = base[+el.dataset.i]; const k = el.dataset.k; t[k] = k === "n" || k === "min" ? Math.max(1, +el.value || 1) : (el.value || null); });
-  base.forEach((t, i) => { t.topics = [...layer.querySelectorAll(`[data-topic][data-i="${i}"]`)].filter(x => x.checked).map(x => x.dataset.topic); if (t.date) t.note = (t.note || "").replace(/ · \w{3} \d+ \w{3} \d{4}$/, ""); });
+  base.forEach((t, i) => { t.topics = [...layer.querySelectorAll(`[data-topic][data-i="${i}"]`)].filter(x => x.checked).map(x => x.dataset.topic); });
   return base;
 }
 function studyMenu() {
   const s = settings();
   openSheet(`<div class="stack"><h2>Study settings</h2>
-  <div class="field"><label>Font size</label><div class="row"><button class="icon-btn" data-act="font" data-v="-1" aria-label="Smaller">A−</button><span class="num">${s.font}</span><button class="icon-btn" data-act="font" data-v="1" aria-label="Bigger">A+</button></div></div>
+  <div class="panel" style="padding:4px 14px"><div class="toggle"><span><b>Font size</b></span><span class="row"><button class="icon-btn" data-act="font" data-v="-1" aria-label="Smaller">A−</button><span class="num">${s.font}</span><button class="icon-btn" data-act="font" data-v="1" aria-label="Bigger">A+</button></span></div>
+  <label class="toggle"><span><b>Show explanations straight away</b></span><input type="checkbox" data-setb="autoX" ${s.autoX ? "checked" : ""}></label>
+  <label class="toggle"><span><b>Read cards aloud</b></span><input type="checkbox" data-setb="autoRead" ${s.autoRead ? "checked" : ""}></label>
+  <label class="toggle"><span><b>"What is it asking?" button</b></span><input type="checkbox" data-setb="aiHint" ${s.aiHint ? "checked" : ""}></label>
   <label class="toggle"><span><b>Reverse cards</b><br><span class="small muted">Show the answer, recall the question.</span></span><input type="checkbox" data-setb="reverse" ${s.reverse ? "checked" : ""}></label>
-  <label class="toggle"><span><b>Type before revealing</b></span><input type="checkbox" data-setb="typeAnswer" ${s.typeAnswer ? "checked" : ""}></label>
+  <label class="toggle"><span><b>Type before revealing</b></span><input type="checkbox" data-setb="typeAnswer" ${s.typeAnswer ? "checked" : ""}></label></div>
   <button class="btn block" data-act="intervals">Repetition intervals · ${PRESETS[s.preset].label}</button><button class="btn ghost block" data-act="closeSheet">Close</button></div>`);
 }
 function intervalsSheet() {
   const s = settings(), units = [["min", 1], ["h", 60], ["days", 1440], ["wks", 10080], ["mos", 43200], ["yrs", 525600]];
   const fmt = m => { if (m == null) return "FSRS"; for (let i = units.length - 1; i >= 0; i--) if (m >= units[i][1] && m % units[i][1] === 0) return (m / units[i][1]) + " " + units[i][0]; return m + " min"; };
   openSheet(`<div class="stack"><h2>Repetition intervals</h2><p class="small muted">How long each rating keeps a card away. Applies to every subject.</p>
-  ${Object.entries(PRESETS).map(([k, p]) => `<button class="opt ${s.preset === k ? "sel" : ""}" data-act="preset" data-v="${k}"><b>${p.label}</b> <span class="small muted">— ${p.hint}</span>${p.m ? `<div class="row small muted num" style="gap:10px;margin-top:4px">${p.m.map((m, i) => `<span><span class="dot" style="background:var(--c${i + 1})"></span> ${fmt(m)}</span>`).join("")}</div>` : ""}</button>`).join("")}
+  <div class="menu">${Object.entries(PRESETS).map(([k, p]) => `<button data-act="preset" data-v="${k}">${s.preset === k ? "✓" : "&nbsp;&nbsp;"} <span class="grow">${p.label}<small>${p.hint}${p.m ? " · " + p.m.map(fmt).join(" / ") : ""}</small></span></button>`).join("")}</div>
   ${s.preset === "custom" ? `<div class="panel stack">${[1, 2, 3, 4, 5].map(n => `<div class="slider" style="grid-template-columns:auto 1fr auto"><span class="dot" style="background:var(--c${n});width:26px;height:26px;display:grid;place-items:center;color:#fff;font-weight:700">${n}</span><input type="number" min="1" value="${s.custom[n - 1]}" data-custom="${n - 1}" aria-label="Minutes for rating ${n}" style="border:1.5px solid var(--line);border-radius:10px;padding:8px;background:var(--card)"><span class="small muted">min · ${fmt(s.custom[n - 1])}</span></div>`).join("")}</div>` : ""}
   <button class="btn ghost block" data-act="closeSheet">Done</button></div>`);
 }
@@ -895,65 +1235,111 @@ function intervalsSheet() {
 // ================================================================ Progress
 function vProgress() {
   const d = today(), days = []; for (let k = 13; k >= 0; k--) days.push(Object.assign({d: d - k}, dayTotals(d - k)));
-  const mx = Math.max(1, ...days.map(x => x.n)), t = now();
+  const mx = Math.max(1, ...days.map(x => x.n));
   const fc = []; for (let k = 0; k < 7; k++) { const end = dayStartMs(d + k + 1), start = k === 0 ? -Infinity : end - DAY; let n = 0; for (const c of CARDS) { const s = S.progress[c.id]; if (s && s.d < end && s.d >= start) n++; } fc.push({d: d + k, n}); }
   const fx = Math.max(1, ...fc.map(x => x.n)), L = levels(CARDS), seen = CARDS.length - L[0];
   const tot = days.reduce((s, x) => s + x.n, 0), good = days.reduce((s, x) => s + x.g, 0), week = days.slice(-7).reduce((s, x) => s + x.ms, 0);
-  const dated = []; for (const g of Object.keys(GROUPS)) for (const tt of testsOf(g)) if (tt.date && dayOf(tt.date) >= d) { const set = new Set(tt.topics), cs = (BYGROUP[g] || []).filter(c => set.has(c.t)); dated.push({g, tt, day: dayOf(tt.date), m: mastery(cs), unseen: cs.filter(c => !S.progress[c.id]).length, n: cs.length}); }
-  dated.sort((a, b) => a.day - b.day);
   const tests = S.tests.slice(-12).reverse();
   return `<header class="band"><div class="col">${bandTop()}<div class="hello">Progress</div><div class="kpis"><div class="kpi"><span>Recall (14 d)</span><b>${tot ? Math.round(good / tot * 100) : 0}%</b></div><div class="kpi"><span>Target</span><b>${Math.round(settings().retention * 100)}%</b></div><div class="kpi"><span>Min this week</span><b>${Math.round(week / 60000)}</b></div></div></div></header><main class="col">
-  ${dated.length ? `<div class="section"><div class="eyebrow">Ready for each test</div>${dated.map(x => `<div class="panel stack" style="gap:6px"><div class="row between"><b>${esc(GROUPS[x.g].title)} ${esc(x.tt.title)} · ${fmtDate(x.day)}</b><span class="num">${Math.round(x.m * 100)}%</span></div><div class="cbar"><i style="width:${x.m * 100}%;background:var(--accent)"></i></div><div class="small muted">${x.n} cards · ${x.unseen} not seen yet · ${x.day - d} days left</div></div>`).join("")}</div>` : ""}
   <div class="section"><div class="eyebrow">Cards per day · last 14 days</div><div class="panel"><div class="chart">${days.map(x => `<div title="${isoOf(x.d)}: ${x.n} cards, ${Math.round(x.ms / 60000)} min"><span>${x.n || ""}</span><i style="height:${x.n / mx * 100}%"></i><span>${isoOf(x.d).slice(8)}</span></div>`).join("")}</div></div></div>
   <div class="section"><div class="eyebrow">Coming due · next 7 days</div><div class="panel"><div class="chart">${fc.map((x, k) => `<div><span>${x.n || ""}</span><i style="height:${x.n / fx * 100}%;background:var(--c5)"></i><span>${k === 0 ? "now" : new Date(x.d * DAY).toLocaleDateString("en-GB", {weekday: "short", timeZone: "UTC"})}</span></div>`).join("")}</div></div></div>
-  <div class="section"><div class="eyebrow">Confidence of all cards</div><div class="panel stack" style="align-items:center">${ring(L, 180, (mastery(CARDS) * 100).toFixed(1) + "%", "Mastery")}<div class="row small muted num" style="justify-content:center">${[0, 1, 2, 3, 4, 5].map(k => `<span><span class="dot" style="background:var(--c${k})"></span> ${k === 0 ? "new" : k}: ${L[k]}</span>`).join("")}</div><div class="small muted">${seen} of ${CARDS.length} cards started</div></div></div>
-  <div class="section"><div class="eyebrow">By subject</div><div class="panel tablewrap"><table><thead><tr><th>Subject</th><th class="n">Mastery</th><th class="n">Started</th><th class="n">Overdue</th><th class="n">Recall now</th></tr></thead><tbody>${DECK.groups.map(g => { const cs = BYGROUP[g.id] || [], c = counts(cs), st = cs.filter(x => S.progress[x.id]); const rn = st.length ? st.reduce((a, x) => a + recallOf(x), 0) / st.length : null; return `<tr><td><b>${esc(g.title)}</b> <span class="muted small">${esc(g.name)}</span></td><td class="n">${(c.m * 100).toFixed(1)}%</td><td class="n">${c.seen}/${c.n}</td><td class="n">${c.over}</td><td class="n">${rn === null ? "—" : Math.round(rn * 100) + "%"}</td></tr>`; }).join("")}</tbody></table></div><p class="small muted">Mastery = average of your latest 1–5 ratings (unseen cards count 0), as in Brainscape. Recall now = the memory model's estimate of what you'd remember today. Recall (14 d) = share of your ratings that were 3 or higher.</p></div>
-  <div class="section"><div class="eyebrow">Tests & exams</div>${tests.length ? `<div class="panel tablewrap"><table><thead><tr><th>Date</th><th>Test</th><th class="n">Score</th><th class="n">Time</th></tr></thead><tbody>${tests.map(x => `<tr><td class="num">${new Date(x.ts).toLocaleDateString("en-GB", {day: "numeric", month: "short"})}</td><td>${esc(GROUPS[x.g] ? GROUPS[x.g].title : x.g)} ${esc(x.title)}</td><td class="n">${x.right}/${x.n}${x.pts ? ` <span class="muted">(${(x.right / x.n * x.pts).toFixed(1)}/${x.pts})</span>` : ""}</td><td class="n">${fmtTime(x.secs)}</td></tr>`).join("")}</tbody></table></div>` : `<p class="muted">No tests yet. Start one from a subject's Tests tab.</p>`}</div></main>` + tabs("progress");
+  <div class="section"><div class="eyebrow">Confidence of all cards</div><div class="panel stack" style="align-items:center">${ring(L, 170, (mastery(CARDS) * 100).toFixed(1) + "%", "Mastery")}<div class="row small muted num" style="justify-content:center">${[0, 1, 2, 3, 4, 5].map(k => `<span><span class="dot" style="background:var(--c${k})"></span> ${k === 0 ? "new" : k}: ${L[k]}</span>`).join("")}</div><div class="small muted">${seen} of ${CARDS.length} cards started</div></div></div>
+  <div class="section"><div class="eyebrow">By subject</div><div class="panel tablewrap"><table><thead><tr><th>Subject</th><th class="n">Mastery</th><th class="n">Started</th><th class="n">Don't know</th><th class="n">Recall now</th></tr></thead><tbody>${DECK.groups.map(g => { const cs = BYGROUP[g.id] || [], c = counts(cs), st = cs.filter(x => S.progress[x.id]); const rn = st.length ? st.reduce((a, x) => a + recallOf(x), 0) / st.length : null; return `<tr><td><b>${esc(g.title)}</b> <span class="muted small">${esc(g.name)}</span></td><td class="n">${(c.m * 100).toFixed(1)}%</td><td class="n">${c.seen}/${c.n}</td><td class="n">${c.weak}</td><td class="n">${rn === null ? "—" : Math.round(rn * 100) + "%"}</td></tr>`; }).join("")}</tbody></table></div><p class="small muted">Mastery = average of your latest 1–5 ratings (unseen cards count 0), as in Brainscape. Recall now = the memory model's estimate of what you'd remember today. Recall (14 d) = share of your ratings that were 3 or higher.</p></div>
+  <div class="section"><div class="eyebrow">Tests & exams</div>${tests.length ? `<div class="panel tablewrap"><table><thead><tr><th>Date</th><th>Test</th><th class="n">Score</th><th class="n">Time</th></tr></thead><tbody>${tests.map(x => `<tr><td class="num">${new Date(x.ts).toLocaleDateString("en-GB", {day: "numeric", month: "short"})}</td><td>${esc(GROUPS[x.g] ? GROUPS[x.g].title : x.g)} ${esc(x.title)}</td><td class="n">${x.right}/${x.n}${x.pts ? ` <span class="muted">(${(x.right / x.n * x.pts).toFixed(1)}/${x.pts})</span>` : ""}</td><td class="n">${fmtTime(x.secs)}</td></tr>`).join("")}</tbody></table></div>` : `<p class="muted">No tests yet. Open the Tests tab to take one.</p>`}</div></main>` + tabs("progress");
 }
 
 // ================================================================ Settings
 function vSettings() {
   const s = settings(), seg = (k, opts) => `<div class="seg full">${opts.map(([v, l]) => `<button data-act="set" data-k="${k}" data-v="${v}" aria-pressed="${String(s[k]) === String(v)}">${l}</button>`).join("")}</div>`;
+  const num = (k, label, hint, min, max) => `<label class="toggle"><span><b>${label}</b>${hint ? `<br><span class="small muted">${hint}</span>` : ""}</span><input type="number" min="${min}" max="${max}" value="${s[k]}" data-setn="${k}"></label>`;
+  const box = (k, label, hint) => `<label class="toggle"><span><b>${label}</b>${hint ? `<br><span class="small muted">${hint}</span>` : ""}</span><input type="checkbox" data-setb="${k}" ${s[k] ? "checked" : ""}></label>`;
+  const voices = ("speechSynthesis" in window ? speechSynthesis.getVoices() : []).filter(v => /^en/.test(v.lang));
   return `<header class="band"><div class="col">${bandTop()}<div class="hello">Settings</div><div class="small" style="color:var(--band-muted);margin-top:6px">Signed in as ${esc(S.user ? S.user.email : "")}</div></div></header><main class="col">
   <div class="section"><div class="eyebrow">Daily</div><div class="panel stack">
   <div class="field"><label>Daily goal</label>${seg("goal", [[10, "10 min"], [15, "15 min"], [25, "25 min"], [40, "40 min"]])}</div>
   <div class="field"><label>New cards per subject per day</label>${seg("newPerDay", [[10, "10"], [20, "20"], [40, "40"], [80, "80"]])}<span class="small muted">The exam planner raises this for a subject when a dated test needs it. Maintaining subjects get a quarter.</span></div>
-  <div class="field"><label>Cards per round</label>${seg("round", [[5, "5"], [10, "10"], [20, "20"]])}</div>
-  <p class="small muted">Reminders: the iPhone app sends one at the time you choose there, only on days you haven't studied.</p></div></div>
-  <div class="section"><div class="eyebrow">Schedule</div><div class="panel stack"><button class="btn block" data-act="intervals">Repetition intervals · ${PRESETS[s.preset].label}</button>
-  <div class="field"><label>Target recall for 4s and 5s (Smart)</label>${seg("retention", [[0.85, "85%"], [0.9, "90%"], [0.95, "95%"]])}</div>
-  <label class="toggle"><span><b>Exam planner</b><br><span class="small muted">Sees every card of a dated test 3 days early, keeps 4s and 5s due before it, and shows each card once more in the last 3 days.</span></span><input type="checkbox" data-setb="planner" ${s.planner ? "checked" : ""}></label>
-  <div class="field"><label>Test questions</label>${seg("qstyle", [["auto", "Auto"], ["self", "Self-check only"]])}</div></div></div>
-  <div class="section"><div class="eyebrow">Subjects</div><div class="panel" style="padding:4px 14px">${DECK.titles.flatMap(T => T.groups).filter(g => GROUPS[g]).map(g => `<div class="topic" style="grid-template-columns:auto 1fr auto"><span class="code" style="width:42px;height:42px">${esc(GROUPS[g].title)}</span><span class="small">${esc(GROUPS[g].name)}<br><button class="tbtn" style="padding:0;min-height:30px" data-act="testsEditor" data-g="${g}">Tests & dates (${testsOf(g).filter(t => t.date).length} dated)</button></span><button class="pill ${statusOf(g)}" data-act="statusSheet" data-g="${g}" style="border:0">${STATUS[statusOf(g)]}</button></div>`).join("")}</div><button class="btn block" data-act="mixSheet">Study mix sliders</button></div>
-  <div class="section"><div class="eyebrow">Studying</div><div class="panel"><label class="toggle"><span><b>Type the answer before revealing</b></span><input type="checkbox" data-setb="typeAnswer" ${s.typeAnswer ? "checked" : ""}></label><label class="toggle"><span><b>Reverse cards</b></span><input type="checkbox" data-setb="reverse" ${s.reverse ? "checked" : ""}></label><div class="toggle"><span><b>Font size</b></span><span class="row"><button class="icon-btn" data-act="font" data-v="-1" aria-label="Smaller">A−</button><span class="num">${s.font}</span><button class="icon-btn" data-act="font" data-v="1" aria-label="Bigger">A+</button></span></div></div></div>
+  <div class="field"><label>Cards per round (then a checkpoint)</label>${seg("round", [[5, "5"], [10, "10"], [20, "20"]])}</div>
+  <div style="padding:0 2px">${num("reviewCap", "Most due cards per subject per session", "0 = no limit. Useful after a break, so the pile doesn't bury new material.", 0, 999)}</div>
+  <p class="small muted">Reminders: the iPhone app sends one at the time you choose there, only on days you haven't reached your goal.</p></div></div>
+  <div class="section"><div class="eyebrow">Memory & schedule</div><div class="panel" style="padding:4px 14px">
+  <div class="toggle"><span><b>Repetition intervals</b><br><span class="small muted">${PRESETS[s.preset].hint}</span></span><button class="btn sm" data-act="intervals">${PRESETS[s.preset].label} ›</button></div>
+  <div class="toggle"><span><b>Target recall for 4s and 5s</b><br><span class="small muted">Higher = more reviews, safer before exams.</span></span><select data-sets="retention"><option value="0.85" ${s.retention == 0.85 ? "selected" : ""}>85%</option><option value="0.9" ${s.retention == 0.9 ? "selected" : ""}>90%</option><option value="0.95" ${s.retention == 0.95 ? "selected" : ""}>95%</option></select></div>
+  ${num("maxIvl", "Longest gap (days)", "A card never waits longer than this. Set it to the days until your exam to keep everything warm.", 1, 3650)}
+  ${num("leech", "A card counts as hard after … lapses", "Hard cards show up in What you don't know.", 2, 20)}
+  ${box("interleave", "Mix topics when learning new cards", "Interleaving helps you tell similar ideas apart. Off = topic by topic.")}
+  ${box("planner", "Exam planner", "Sees every card of a dated test early, keeps 4s and 5s due before it, and brings each card back once in the final days.")}
+  ${num("plannerDays", "Final review days before a test", "Every test card comes back once in this window.", 1, 10)}
+  <div class="toggle"><span><b>Test questions</b></span><select data-sets="qstyle"><option value="auto" ${s.qstyle === "auto" ? "selected" : ""}>Auto (T/F, multiple choice, typed)</option><option value="self" ${s.qstyle === "self" ? "selected" : ""}>Self-check only</option></select></div></div></div>
+  <div class="section"><div class="eyebrow">Studying</div><div class="panel" style="padding:4px 14px">
+  ${box("autoX", "Show explanations straight away", "Off = tap to open them.")}
+  ${box("typeAnswer", "Type the answer before revealing")}
+  ${box("reverse", "Reverse cards", "Show the answer, recall the question.")}
+  <div class="toggle"><span><b>Font size</b></span><span class="row"><button class="icon-btn" data-act="font" data-v="-1" aria-label="Smaller">A−</button><span class="num">${s.font}</span><button class="icon-btn" data-act="font" data-v="1" aria-label="Bigger">A+</button></span></div></div></div>
+  <div class="section"><div class="eyebrow">Listening</div><div class="panel" style="padding:4px 14px">
+  ${box("autoRead", "Read cards aloud while studying", "Question when it appears, answer when you reveal it.")}
+  <div class="toggle"><span><b>Voice</b></span><select data-sets="voice"><option value="">Best available</option>${voices.map(v => `<option value="${esc(v.name)}" ${s.voice === v.name ? "selected" : ""}>${esc(v.name)} (${esc(v.lang)})</option>`).join("")}</select></div>
+  <div class="toggle"><span><b>Speed</b></span><select data-sets="rate">${[0.8, 0.9, 1, 1.15, 1.3, 1.5, 1.75, 2].map(r => `<option value="${r}" ${+s.rate === r ? "selected" : ""}>${r}×</option>`).join("")}</select></div>
+  <div class="toggle"><span class="small muted">Better voices: on iPhone, Settings → Accessibility → Spoken Content → Voices → English → download an "Enhanced" or "Premium" voice. On Mac, System Settings → Accessibility → Spoken Content.</span><button class="btn sm" data-act="testVoice">Test</button></div></div></div>
+  <div class="section"><div class="eyebrow">AI helper</div><div class="panel" style="padding:4px 14px">
+  ${box("aiHint", '"What is it asking?" button on cards', "Explains the question without giving the answer.")}
+  <div class="toggle"><span><b>Language for AI explanations</b></span><select data-sets="aiLang">${["English", "Ukrainian", "Polish", "Russian"].map(l => `<option ${s.aiLang === l ? "selected" : ""}>${l}</option>`).join("")}</select></div>
+  <p class="small muted" style="margin:8px 0 12px">Answers are written by a free Groq model from your topic notes and slides. Check important details against the lecture.</p></div></div>
+  <div class="section"><div class="eyebrow">Subjects</div><div class="menu">${DECK.titles.flatMap(T => T.groups).filter(g => GROUPS[g]).map(g => `<button data-act="subjectMenu" data-g="${g}"><span class="code" style="width:38px;height:38px">${esc(GROUPS[g].title)}</span><span class="grow">${esc(GROUPS[g].name)}<small>${STATUS[statusOf(g)]} · ${testsOf(g).filter(t => t.date).length} dated tests</small></span>›</button>`).join("")}</div><button class="btn block" data-act="mixSheet">Study mix sliders</button></div>
+  <div class="section"><div class="eyebrow">Appearance</div><div class="panel stack"><div class="field"><label>Theme</label>${seg("theme", [["auto", "Auto"], ["light", "Light"], ["dark", "Dark"]])}</div></div></div>
   <div class="section"><div class="eyebrow">Account & data</div><div class="panel stack"><p class="small muted">Your progress is saved on this device at once and synced to your Neon database. It works offline and catches up later.</p>
-  <div class="row" style="gap:8px"><button class="btn grow" data-act="syncNow">Sync now</button><button class="btn grow" data-act="export">Copy a backup</button></div><button class="btn ghost block" data-act="resetAsk" style="color:var(--bad)">Reset a subject's progress…</button><button class="btn block" data-act="logout">Sign out</button></div></div>
-  <div class="section"><div class="eyebrow">Keys on a keyboard</div><div class="panel small">Space = show answer · 1–5 = rate · T / F = true or false · U = undo · S = bookmark · E = edit · / = search</div><p class="small muted">Deck ${esc(DECK.version)} · ${CARDS.length} cards.</p></div></main>` + tabs("");
+  <div class="row" style="gap:8px"><button class="btn grow" data-act="syncNow">Sync now</button><button class="btn grow" data-act="export">Copy a backup</button><button class="btn grow" data-act="exportCsv">Copy as CSV</button></div><button class="btn ghost block" data-act="resetAsk" style="color:var(--bad)">Reset a subject's progress…</button><button class="btn block" data-act="logout">Sign out</button></div></div>
+  <div class="section"><div class="eyebrow">Keys on a keyboard</div><div class="panel small">Space = show answer · 1–5 = rate · T / F = true or false · U = undo · S = bookmark · E = edit · H = what is it asking · X = explain · L = listen · / = search</div><p class="small muted">Deck ${esc(DECK.version)} · library ${esc(LIB ? LIB.version : "—")} · ${CARDS.length} cards.</p></div></main>` + tabs("");
 }
 
+// ================================================================ viewers
+function slideViewer(list, i, title) {
+  window._sv = {list, i, title};
+  const s = list[i];
+  layer.innerHTML = `<div class="viewer" role="dialog" aria-modal="true"><div class="vbar"><span class="small">${esc(title)} · ${s.n != null ? "slide " + s.n : (i + 1) + " / " + list.length}</span><span class="row" style="gap:6px">${s.text ? `<button class="icon-btn" data-act="svListen" aria-label="Read this slide aloud">🔊</button>` : ""}<button class="icon-btn" data-act="closeSheet" aria-label="Close">✕</button></span></div><div class="stage" id="svStage"><img data-key="${s.key}" alt="${esc(s.alt || ("Slide " + (s.n || "")))}"></div>${s.alt ? `<p class="small" style="margin:6px 0">${esc(s.alt)}</p>` : ""}<div class="vbar"><button class="icon-btn" data-act="svPrev" aria-label="Previous" ${i ? "" : "disabled"}>‹</button><span class="small num">${i + 1} / ${list.length}</span><button class="icon-btn" data-act="svNext" aria-label="Next" ${i < list.length - 1 ? "" : "disabled"}>›</button></div></div>`;
+  fillImages(layer);
+  const st = document.getElementById("svStage"); let x0 = null;
+  st.addEventListener("touchstart", e => { x0 = e.touches[0].clientX; }, {passive: true});
+  st.addEventListener("touchend", e => { if (x0 === null) return; const dx = e.changedTouches[0].clientX - x0; if (Math.abs(dx) > 50) slideStep(dx < 0 ? 1 : -1); x0 = null; });
+}
+function slideStep(d) { const v = window._sv; if (!v) return; const j = clamp(v.i + d, 0, v.list.length - 1); if (j !== v.i) slideViewer(v.list, j, v.title); }
+
 // ================================================================ events
-document.addEventListener("click", e => {
+document.addEventListener("click", async e => {
   const el = e.target.closest("[data-act]"); if (!el) return;
   const act = el.dataset.act, ds = el.dataset;
-  if (act === "closeSheet" && el.classList.contains("scrim") && e.target !== el) return;
+  if (act === "closeSheet" && (el.classList.contains("scrim")) && e.target !== el) return;
   const set = (k, v) => { S.meta.settings[k] = v; S.meta.settings.u = now(); markMeta(); };
+  const topicCards = t => studyCards(BYTOPIC[t] || []);
   switch (act) {
-    case "tab": session = null; closeSheet(); go(ds.gf ? {name: "search", gf: ds.gf} : {name: ds.v}); break;
-    case "gtab": view.tab = ds.v; render(); break;
-    case "group": closeSheet(); go({name: "group", g: ds.g}); break;
-    case "topic": go({name: "topic", t: ds.t}); break;
-    case "toggleTopic": { const s = selected(ds.g); el.checked ? s.add(ds.t) : s.delete(ds.t); render(); break; }
-    case "selToggleAll": sel[ds.g] = el.checked ? new Set(GROUPS[ds.g].topics.map(t => t.id)) : new Set(); render(); break;
-    case "order": { const o = Object.assign({}, settings().order); o[ds.g] = ds.v; set("order", o); render(); break; }
-    case "study": startStudy(cardsOfTopics(selected(ds.g)), "srs", GROUPS[ds.g].title + " · study"); break;
-    case "studyGroup": startStudy((BYGROUP[ds.g] || []).filter(c => c.t !== "grk-info"), "srs", GROUPS[ds.g].title + " · today"); break;
-    case "studyPlan": case "studyPlanClose": closeSheet(); startStudy(CARDS.filter(c => statusOf(c.g) !== "paused" && c.t !== "grk-info"), "srs", "Today's plan"); break;
-    case "studyBm": startStudy(bookmarked(), "list", "Bookmarked"); break;
+    case "tab": session = null; closeSheet(); picked.clear(); go(ds.gf ? {name: "search", gf: ds.gf} : {name: ds.v, g: ds.g}); break;
+    case "ttab": view.tab = ds.v; render(); break;
+    case "topic": closeSheet(); go({name: "topic", t: ds.t, tab: "learn"}); break;
+    case "testpage": closeSheet(); go({name: "testpage", g: ds.g, t: ds.t}); break;
+    case "testsFilter": view.g = ds.v || undefined; render(); break;
+    case "selectMode": view.select = !view.select; if (!view.select) picked.clear(); render(); break;
+    case "selectModeG": closeSheet(); view = {name: "learn", select: true}; render(); toast("Tick topics, then Study, Drill or Test"); break;
+    case "combineWith": closeSheet(); picked = new Set([ds.t]); go({name: "learn", select: true}); toast("Tick more topics to combine"); break;
+    case "pick": picked.has(ds.t) ? picked.delete(ds.t) : picked.add(ds.t); render(); break;
+    case "clearPicked": picked.clear(); view.select = false; render(); break;
+    case "studyPicked": startStudy(cardsOfTopics(picked), "srs", plural(picked.size, "topic") + " combined"); break;
+    case "drillPicked": drillSheet(studyCards(cardsOfTopics(picked)), plural(picked.size, "topic") + " · drill"); break;
+    case "testPicked": { const ts = [...picked]; testSheet(ts, TOPICS[ts[0]].g); break; }
+    case "listenPicked": listen(plural(picked.size, "topic"), [...picked].flatMap(t => [TOPICS[t].title + ".", libTopic(t).summary || "", libTopic(t).remember || ""])); break;
+    case "openPaused": view["open_" + ds.g] = 1; render(); break;
+    case "resume": { const l = LS.get("last"); const cs = (l.ids || []).map(id => BYID[id]).filter(Boolean); startStudy(cs, l.kind === "drill" ? "srs" : (l.kind || "srs"), l.label || "Continue"); break; }
+    case "studyPlan": case "studyPlanClose": closeSheet(); startStudy(CARDS.filter(c => statusOf(c.g) !== "paused" && c.t !== "grk-info"), "srs", "Today's mix"); break;
+    case "studyGroup": closeSheet(); startStudy((BYGROUP[ds.g] || []).filter(c => c.t !== "grk-info"), "srs", GROUPS[ds.g].title); break;
+    case "weakStudy": closeSheet(); { const w = weakCards(BYGROUP[ds.g] || []), due = studyCards(BYGROUP[ds.g] || []).filter(c => isDue(c, now()) && !w.includes(c)); startStudy(shuffle(w).concat(due), "list", GROUPS[ds.g].title + " · don't know"); } break;
+    case "weakAll": go({name: "weak"}); break;
+    case "studyIds": closeSheet(); { const cs = ds.ids.split(",").map(id => BYID[id]).filter(Boolean); startStudy(cs, ds.mode || "list", ds.label || "Selected cards"); } break;
+    case "studyTopic": startStudy(topicCards(ds.t), "srs", TOPICS[ds.t].title); break;
+    case "drillTopic": closeSheet(); drillSheet(topicCards(ds.t), TOPICS[ds.t].title + " · drill"); break;
+    case "drillGroup": closeSheet(); drillSheet(studyCards(BYGROUP[ds.g] || []), GROUPS[ds.g].title + " · drill"); break;
+    case "testTopic": closeSheet(); buildQuiz(TOPICS[ds.t].g, TOPICS[ds.t].title + " · quick test", "test", [ds.t], 10, 12, null); break;
     case "studyHits": startStudy(lastHits, "list", "Search results"); break;
-    case "studyTopic": startStudy(BYTOPIC[ds.t] || [], "srs", TOPICS[ds.t].title); break;
     case "studyOne": closeSheet(); startStudy([BYID[ds.id]], "list", "One card"); break;
     case "studyMissed": startStudy(quiz.result.missed.map(id => BYID[id]).filter(Boolean), "list", "Missed in " + quiz.title); break;
-    case "studyWeak": { const ids = session.q.filter((id, i, a) => a.indexOf(id) === i && confOf(id) > 0 && confOf(id) <= 2); startStudy(ids.map(id => BYID[id]), "list", "Rated 1–2 in the drill"); break; }
+    case "studyWeakSession": { const ids = session.q.filter((id, i, a) => a.indexOf(id) === i && BYID[id] && weakness(BYID[id])); startStudy(ids.map(id => BYID[id]), "list", "Still don't know"); break; }
     case "anyway": { const scope = session.scope.map(id => BYID[id]).filter(Boolean); const pick = scope.slice().sort((a, b) => (confOf(a.id) - confOf(b.id)) || ((S.progress[a.id] ? S.progress[a.id].d : 0) - (S.progress[b.id] ? S.progress[b.id].d : 0))).slice(0, settings().round); startStudy(pick, "list", session.label, scope); break; }
     case "reveal": reveal(); break;
     case "cmdCheck": cmdCheck(); break;
@@ -961,7 +1347,7 @@ document.addEventListener("click", e => {
     case "rate": rate(+ds.n); break;
     case "undo": undo(); break;
     case "continue": go({name: "study"}); break;
-    case "endStudy": { const back = session && session.back; session = null; undoBuf = null; go(back && !["study", "check", "caught", "boot", "login"].includes(back.name) ? back : {name: "today"}); scheduleSync(300); break; }
+    case "endStudy": { const back = session && session.back; session = null; undoBuf = null; ttsStop(); go(back && !["study", "check", "caught", "boot", "login"].includes(back.name) ? back : {name: "learn"}); scheduleSync(300); break; }
     case "studyMenu": studyMenu(); break;
     case "font": set("font", clamp((settings().font || 0) + (+ds.v), 0, 3)); render(); if (layer.innerHTML) studyMenu(); break;
     case "intervals": intervalsSheet(); break;
@@ -970,11 +1356,21 @@ document.addEventListener("click", e => {
     case "mixSheet": mixSheet(); break;
     case "mixReset": set("mix", {}); mixSheet(); break;
     case "statusSheet": statusSheet(ds.g); break;
+    case "subjectMenu": subjectMenu(ds.g); break;
+    case "topicMenu": topicMenu(ds.t); break;
     case "setStatus": { const st = Object.assign({}, settings().status); st[ds.g] = ds.v; set("status", st); closeSheet(); render(); toast(GROUPS[ds.g].title + ": " + STATUS[ds.v]); break; }
-    case "drillSheet": drillSheet(ds.g); break;
-    case "drillGo": { const lv = new Set([...layer.querySelectorAll("[data-lvl]")].filter(x => x.checked).map(x => +x.dataset.lvl)); const cs = shuffle(cardsOfTopics(selected(ds.g)).filter(c => lv.has(confOf(c.id)))); closeSheet(); if (!cs.length) return toast("No cards with those ratings"); startStudy(cs, "drill", GROUPS[ds.g].title + " · drill"); break; }
+    case "orderSheet": orderSheet(ds.g); break;
+    case "order": { const o = Object.assign({}, settings().order); o[ds.g] = ds.v; set("order", o); closeSheet(); toast("Saved"); break; }
+    case "hideSheet": hideSheet(ds.g); break;
+    case "hideTopic": { const h = Object.assign({}, settings().hidden || {}); if (h[ds.t]) delete h[ds.t]; else h[ds.t] = 1; set("hidden", h); closeSheet(); render(); toast(h[ds.t] ? "Hidden from study" : "Shown again"); break; }
+    case "openNote": closeSheet(); location.href = noteUrl(ds.t); break;
+    case "markKnownT": confirmSheet("Mark as known", `Unseen cards in "${TOPICS[ds.t].title}" get a 4 and come back in a few days. Cards you've studied keep their ratings.`, "markKnownTGo", {t: ds.t}); break;
+    case "markKnownG": confirmSheet("Mark as known", `Every unseen ${GROUPS[ds.g].title} card gets a 4 and comes back in a few days. Cards you've studied keep their ratings.`, "markKnownGGo", {g: ds.g}); break;
+    case "markKnownTGo": case "markKnownGGo": { const list = act === "markKnownTGo" ? BYTOPIC[ds.t] || [] : BYGROUP[ds.g] || []; let n = 0; for (const c of list) if (!S.progress[c.id]) { const t = now(), st = Object.assign(newState(null, 4, t), {c: 4, lt: t, u: t, n: today(), h: [[Math.round(t / 1000), 4]]}); st.d = t + gapMinutes(4, st.s, true) * MIN; S.progress[c.id] = st; markDirty(c.id); n++; } closeSheet(); render(); toast(plural(n, "card") + " marked as known"); break; }
+    case "resetT": confirmSheet("Reset progress", `Clears your ratings for every card in "${TOPICS[ds.t].title}", on every device.`, "resetTGo", {t: ds.t}); break;
+    case "resetTGo": for (const c of BYTOPIC[ds.t] || []) if (S.progress[c.id]) { delete S.progress[c.id]; markDirty(c.id); } closeSheet(); render(); toast("Topic reset"); break;
+    case "drillGo": { const lv = new Set([...layer.querySelectorAll("[data-lvl]")].filter(x => x.checked).map(x => +x.dataset.lvl)); const cs = shuffle(window._drill.cards.filter(c => lv.has(confOf(c.id)))); closeSheet(); if (!cs.length) return toast("No cards with those ratings"); startStudy(cs, "drill", window._drill.label); break; }
     case "startTest": { const t = testsOf(ds.g).find(x => x.id === ds.t); buildQuiz(ds.g, t.title, t.kind, t.topics, t.n, t.min, ds.g === "grk" ? (t.kind === "exam" ? 70 : 15) : null); break; }
-    case "customTest": testSheet(ds.g); break;
     case "testsEditor": testsEditor(ds.g); break;
     case "testAdd": { const list = readTestsForm(ds.g); list.push({id: ds.g + "-c" + now().toString(36), kind: "test", title: "New test", date: null, n: 20, min: 30, note: "", topics: GROUPS[ds.g].topics.map(t => t.id)}); S.meta.settings.tests = Object.assign({}, settings().tests, {[ds.g]: list}); S.meta.settings.u = now(); markMeta(); testsEditor(ds.g); break; }
     case "testDel": { const list = readTestsForm(ds.g); list.splice(+ds.i, 1); S.meta.settings.tests = Object.assign({}, settings().tests, {[ds.g]: list}); S.meta.settings.u = now(); markMeta(); testsEditor(ds.g); break; }
@@ -987,27 +1383,67 @@ document.addEventListener("click", e => {
     case "finish": finishQuiz(); break;
     case "quitTest": openSheet(`<div class="stack"><h2>Finish now?</h2><p class="muted">Unanswered questions count as wrong.</p><button class="btn primary block" data-act="finishNow">Finish and see results</button><button class="btn block" data-act="abandon">Leave without saving</button><button class="btn ghost block" data-act="closeSheet">Keep going</button></div>`); break;
     case "finishNow": closeSheet(); finishQuiz(); break;
-    case "abandon": closeSheet(); clearInterval(tick); quiz = null; go({name: "today"}); break;
+    case "abandon": closeSheet(); clearInterval(tick); quiz = null; go({name: "learn"}); break;
     case "gf": view.gf = ds.v; view.focus = false; render(); break;
     case "lv": { const v = +ds.v, l = (view.lv || []).slice(); const i = l.indexOf(v); i >= 0 ? l.splice(i, 1) : l.push(v); view.lv = l; view.focus = false; render(); break; }
     case "fl": { const l = (view.fl || []).slice(); const i = l.indexOf(ds.v); i >= 0 ? l.splice(i, 1) : l.push(ds.v); view.fl = l; view.focus = false; render(); break; }
+    case "cardFilter": view.cf = ds.v; render(); break;
     case "card": cardSheet(ds.id); break;
     case "edit": editSheet(ds.id); break;
-    case "addCard": addSheet(ds.g); break;
+    case "addCard": closeSheet(); addSheet(ds.g, ds.t); break;
     case "resetEdit": S.meta.edits[ds.id] = {u: now()}; afterEdit("Back to the original text"); break;
     case "delCard": S.meta.custom[ds.id] = Object.assign({}, S.meta.custom[ds.id], {del: 1, u: now()}); afterEdit("Card deleted"); break;
     case "resetCard": delete S.progress[ds.id]; markDirty(ds.id); closeSheet(); toast("Card reset"); render(); break;
-    case "closeSheet": closeSheet(); if (view.name === "study") render(); break;
-    case "set": { const k = ds.k; set(k, typeof DEFAULT_SETTINGS[k] === "number" ? +ds.v : ds.v); render(); break; }
+    case "closeSheet": closeSheet(); window._sv = null; if (view.name === "study") render(); break;
+    case "set": { const k = ds.k; set(k, typeof DEFAULT_SETTINGS[k] === "number" ? +ds.v : ds.v); applyTheme(); render(); break; }
     case "syncNow": sync(); break;
     case "export": { const body = JSON.stringify({recall: 3, exported: new Date().toISOString(), progress: S.progress, meta: S.meta, tests: S.tests}); (navigator.clipboard ? navigator.clipboard.writeText(body) : Promise.reject()).then(() => toast("Backup copied — paste it into a note"), () => toast("Couldn't copy here")); break; }
+    case "exportCsv": { const rows = [["subject", "topic", "question", "last rating", "reviews", "lapses", "recall now", "due"]].concat(CARDS.filter(c => S.progress[c.id]).map(c => { const s = S.progress[c.id]; return [GROUPS[c.g].title, TOPICS[c.t].title, c.q, s.c, s.r, s.l || 0, Math.round(recallOf(c) * 100) + "%", new Date(s.d).toISOString().slice(0, 10)]; })); const csv = rows.map(r => r.map(v => '"' + String(v).replace(/"/g, '""') + '"').join(",")).join("\n"); (navigator.clipboard ? navigator.clipboard.writeText(csv) : Promise.reject()).then(() => toast("CSV copied — paste it into a spreadsheet"), () => toast("Couldn't copy here")); break; }
     case "resetAsk": openSheet(`<div class="stack"><h2>Reset progress</h2><p class="muted">Clears your ratings and schedule for one subject, on every device. Cards, edits and test history stay.</p>${DECK.groups.map(g => `<button class="btn block" data-act="resetG" data-g="${g.id}">Reset ${esc(g.title)} · ${esc(g.name)}</button>`).join("")}<button class="btn ghost block" data-act="closeSheet">Cancel</button></div>`); break;
-    case "resetG": { for (const c of BYGROUP[ds.g] || []) if (S.progress[c.id]) { delete S.progress[c.id]; markDirty(c.id); } closeSheet(); toast(GROUPS[ds.g].title + " progress reset"); render(); break; }
+    case "resetG": confirmSheet("Reset progress", `Clears your ratings for every ${GROUPS[ds.g].title} card, on every device.`, "resetGGo", {g: ds.g}); break;
+    case "resetGGo": { for (const c of BYGROUP[ds.g] || []) if (S.progress[c.id]) { delete S.progress[c.id]; markDirty(c.id); } closeSheet(); toast(GROUPS[ds.g].title + " progress reset"); render(); break; }
     case "logout": relay("/signout", {session: S.session}).catch(() => {}); IDB.del("state"); S = blankState(); JWT = null; go({name: "login"}); break;
-    case "google": googleStart(el); break;
     case "loginMode": view = {name: "login", mode: view.mode === "signup" ? "signin" : "signup"}; render(); break;
+    case "google": googleStart(el); break;
+    // files, slides, figures
+    case "openFile": openFile(ds.k); break;
+    case "slideView": { const f = (libTopic(ds.t).files || []).find(x => x.key === ds.k); slideViewer(f.slides, +ds.i, f.title); break; }
+    case "figView": { const L = libTopic(ds.t); slideViewer(L.figures.map(f => ({key: f.key, alt: f.alt})), +ds.i, "Figures"); break; }
+    case "cardSlide": { const c = BYID[ds.id], l = cardLink(ds.id); const f = (libTopic(c.t).files || []).find(x => x.key === l.deck); if (f && f.slides) slideViewer(f.slides, Math.max(0, f.slides.findIndex(s => s.key === l.key)), f.title); else slideViewer([{key: l.key, alt: l.alt}], 0, "Figure"); break; }
+    case "svPrev": slideStep(-1); break;
+    case "svNext": slideStep(1); break;
+    case "svListen": { const v = window._sv; listen(v.title + " · slide " + v.list[v.i].n, [v.list[v.i].text]); break; }
+    // listening
+    case "listenTopic": { const L = libTopic(ds.t), T = TOPICS[ds.t]; const slides = (L.files || []).flatMap(f => f.slides || []);
+      const parts = ds.v === "sum" ? [T.title + ".", L.summary, L.remember] : ds.v === "notes" ? (L.sections || []).flatMap(s => [s.h + ".", s.md]) : ds.v === "chapter" ? [L.chapter] : ds.v === "slides" ? slides.map(s => "Slide " + s.n + ". " + s.text) : (BYTOPIC[ds.t] || []).slice(0, 60).flatMap(c => ["Question. " + c.q, "Answer. " + (c.cmd || c.a)]);
+      listen(T.title, parts.filter(Boolean)); break; }
+    case "listenTest": { const t = testsOf(ds.g).find(x => x.id === ds.t); listen(GROUPS[ds.g].title + " " + t.title, t.topics.filter(x => TOPICS[x]).flatMap(x => [TOPICS[x].title + ".", libTopic(x).summary || "", libTopic(x).remember || ""])); break; }
+    case "ttsToggle": ttsToggle(); break;
+    case "ttsBack": ttsSkip(-1); break;
+    case "ttsFwd": ttsSkip(1); break;
+    case "ttsStop": ttsStop(); break;
+    case "ttsRate": { const rs = [0.8, 1, 1.15, 1.3, 1.5, 1.75, 2], cur = rs.indexOf(+settings().rate); set("rate", rs[(cur + 1) % rs.length]); drawPlayer(); if (TTS.playing && !TTS.paused) { speechSynthesis.cancel(); speakNext(); } break; }
+    case "testVoice": listen("Voice test", ["This is how your cards will sound. The weighted grayscale formula is zero point two nine nine R, plus zero point five eight seven G, plus zero point one one four B."]); break;
+    case "readQ": readCard(BYID[ds.id], false); break;
+    case "readA": readCard(BYID[ds.id], true); break;
+    // AI
+    case "aiHint": { const c = BYID[ds.id], box = document.getElementById("aiHintBox"); box.className = "xpl ai"; box.innerHTML = ""; await aiInto(box, "hint", {id: c.id, q: c.q, topic: TOPICS[c.t].title, subject: GROUPS[c.g].name, context: cardContext(c)}); break; }
+    case "aiExplain": { const c = BYID[ds.id], box = el.closest(".sheet, .study").querySelector("#aiBox"); box.className = "xpl ai"; await aiInto(box, "explain", {id: c.id, q: c.q, a: c.cmd || c.a, x: c.x || "", topic: TOPICS[c.t].title, subject: GROUPS[c.g].name, context: cardContext(c)}); break; }
+    case "aiDraft": { const c = BYID[ds.id], ta = document.getElementById("ex"); el.disabled = true; el.innerHTML = `<span class="spin"></span> Drafting…`; try { ta.value = (await askAI("explain", {id: c.id + "-draft", q: c.q, a: c.cmd || c.a, topic: TOPICS[c.t].title, subject: GROUPS[c.g].name, context: cardContext(c)})).trim(); } catch (er) { toast(er.message); } el.disabled = false; el.textContent = "✨ Draft again"; break; }
+    case "aiSummary": { const box = document.getElementById("aiSum"); box.className = "prose"; box.style.marginTop = "12px"; const cs = BYTOPIC[ds.t] || []; await aiInto(box, "summary", {id: "sum-" + ds.t, topic: TOPICS[ds.t].title, subject: GROUPS[TOPICS[ds.t].g].name, context: cs.slice(0, 60).map(c => "Q: " + c.q + "\nA: " + (c.cmd || c.a)).join("\n")}); break; }
+    case "askPreset": askTopic(ds.q); break;
   }
 });
+async function askTopic(q) {
+  const t = view.t; if (!q || !t) return;
+  const hist = CHATS[t] = CHATS[t] || [];
+  hist.push({role: "user", content: q}); render();
+  const chat = document.getElementById("chat"); const box = document.createElement("div"); box.className = "msg ai prose"; chat.appendChild(box);
+  box.innerHTML = `<span class="spin"></span> Thinking…`;
+  try { const a = await askAI("ask", {question: q, topic: TOPICS[t].title, subject: GROUPS[TOPICS[t].g].name, context: topicContext(t), history: hist.slice(0, -1)}); hist.push({role: "assistant", content: a}); }
+  catch (e) { hist.push({role: "assistant", content: "⚠️ " + (e.status === 503 ? "The AI helper isn't switched on yet (no keys)." : e.message)}); }
+  if (view.name === "topic" && view.t === t) { render(); const c = document.getElementById("chat"); if (c) c.lastElementChild.scrollIntoView({block: "start"}); }
+}
 function afterEdit(msg) { markMeta(); indexDeck(); closeSheet(); toast(msg); render(); }
 document.addEventListener("input", e => {
   if (e.target.id === "q") { clearTimeout(window._st); const v = e.target.value; window._st = setTimeout(() => { view.q = v; view.focus = true; render(); }, 180); }
@@ -1015,8 +1451,12 @@ document.addEventListener("input", e => {
   if (e.target.dataset.mix) { const m = Object.assign({}, settings().mix); m[e.target.dataset.mix] = +e.target.value; S.meta.settings.mix = m; S.meta.settings.u = now(); document.getElementById("mx-" + e.target.dataset.mix).textContent = e.target.value + "%"; markMeta(); }
 });
 document.addEventListener("change", e => {
-  if (e.target.dataset.setb) { S.meta.settings[e.target.dataset.setb] = e.target.checked; S.meta.settings.u = now(); markMeta(); }
-  if (e.target.dataset.custom) { const c = settings().custom.slice(); c[+e.target.dataset.custom] = Math.max(1, +e.target.value || 1); S.meta.settings.custom = c; S.meta.settings.u = now(); markMeta(); intervalsSheet(); }
+  const d = e.target.dataset, s = S.meta.settings;
+  if (d.setb) { s[d.setb] = e.target.checked; s.u = now(); markMeta(); }
+  if (d.setn) { s[d.setn] = Math.max(+e.target.min || 0, Math.min(+e.target.max || 1e9, +e.target.value || 0)); s.u = now(); markMeta(); }
+  if (d.sets) { s[d.sets] = ["retention", "rate"].includes(d.sets) ? +e.target.value : e.target.value; s.u = now(); markMeta(); }
+  if (d.hide) { const h = Object.assign({}, s.hidden || {}); if (e.target.checked) delete h[d.hide]; else h[d.hide] = 1; s.hidden = h; s.u = now(); markMeta(); render(); }
+  if (d.custom) { const c = s.custom.slice(); c[+d.custom] = Math.max(1, +e.target.value || 1); s.custom = c; s.u = now(); markMeta(); intervalsSheet(); }
 });
 document.addEventListener("submit", async e => {
   e.preventDefault(); const f = e.target;
@@ -1026,8 +1466,10 @@ document.addEventListener("submit", async e => {
     try {
       takeLogin(await relay(signup ? "/signup" : "/signin", signup ? {email, password: pw, name: email.split("@")[0]} : {email, password: pw}));
       view = {name: "boot"}; render(); await sync();
-      if (DECK && S.session) go({name: "today"});
-    } catch (err) { view = Object.assign({}, view, {email, err: signup ? (err.status === 422 || err.status === 400 ? "Can't create this account: " + err.message : err.message) : (err.status === 401 ? "Wrong email or password." : "Can't reach the login service — " + err.message)}); render(); }
+      if (DECK && S.session) go({name: "learn"});
+    } catch (err) { view = Object.assign({}, view, {email, err: signup ? "Can't create this account: " + err.message : (err.status === 401 ? "Wrong email or password." : "Can't reach the login service — " + err.message)}); render(); }
+  } else if (f.id === "askForm") {
+    const i = document.getElementById("askIn"), q = i.value.trim(); i.value = ""; askTopic(q);
   } else if (f.id === "editForm") {
     const id = f.dataset.id, c = BYID[id], a = f.querySelector("#ea").value.trim(), x = f.querySelector("#ex").value.trim();
     if (c.mine) S.meta.custom[id] = Object.assign({}, S.meta.custom[id], {q: f.querySelector("#eq").value.trim(), a, x, u: now()});
@@ -1040,15 +1482,16 @@ document.addEventListener("submit", async e => {
     if (!c.q || !c.a) return toast("Fill in a question and an answer");
     S.meta.custom[id] = c; afterEdit("Card added");
   } else if (f.id === "testForm") {
-    const g = f.dataset.g, n = +f.querySelector("#tn").value || 20, m = +f.querySelector("#tm").value || 20, kind = f.querySelector('[data-act="seg"][aria-pressed="true"]').dataset.v;
-    closeSheet(); buildQuiz(g, kind === "exam" ? "Custom exam" : "Custom test", kind, [...selected(g)], n, m, null);
+    const {topics, g} = window._qt, n = +f.querySelector("#tn").value || 20, m = +f.querySelector("#tm").value || 20, kind = f.querySelector('[data-act="seg"][aria-pressed="true"]').dataset.v;
+    closeSheet(); buildQuiz(g, kind === "exam" ? "Custom exam" : "Custom test", kind, topics, n, m, null);
   } else if (f.id === "testsForm") {
     const g = f.dataset.g, list = readTestsForm(g);
     S.meta.settings.tests = Object.assign({}, settings().tests, {[g]: list}); S.meta.settings.u = now(); markMeta(); closeSheet(); render(); toast("Tests saved");
   }
 });
 document.addEventListener("keydown", e => {
-  if (e.key === "Escape" && layer.innerHTML) return closeSheet();
+  if (window._sv && layer.innerHTML) { if (e.key === "ArrowRight") return slideStep(1); if (e.key === "ArrowLeft") return slideStep(-1); }
+  if (e.key === "Escape" && layer.innerHTML) { window._sv = null; return closeSheet(); }
   if (e.target.id === "cmdIn" && e.key === "Enter") { e.preventDefault(); return cmdCheck(); }
   if (e.target.id === "qcmd" && e.key === "Enter") { e.preventDefault(); return document.querySelector('[data-act="qcmd"]').click(); }
   if (e.target.matches && e.target.matches("input,textarea,select")) return;
@@ -1060,8 +1503,12 @@ document.addEventListener("keydown", e => {
     if (e.key === "u" || ((e.metaKey || e.ctrlKey) && e.key === "z")) undo();
     if (e.key === "s") document.querySelector('.face [data-act="bm"]').click();
     if (e.key === "e") editSheet(c.id);
+    if (e.key === "h") { const b = document.querySelector('[data-act="aiHint"]'); if (b) b.click(); }
+    if (e.key === "x") { const b = document.querySelector('[data-act="aiExplain"]'); if (b) b.click(); }
+    if (e.key === "l") readCard(c, session.revealed);
   }
 });
+
 // ================================================================ Google sign-in
 // Neon only offers the redirect flow: the relay starts it and hands back a short-lived challenge,
 // Google returns here with ?neon_auth_session_verifier=…, and the relay swaps both for a session.
@@ -1088,16 +1535,23 @@ async function googleFinish() {
 (async () => {
   const saved = await IDB.get("state");
   if (saved && saved.session) { S = Object.assign(blankState(), saved); S.meta.settings = Object.assign({}, DEFAULT_SETTINGS, S.meta.settings || {}); ["edits", "custom", "bm", "days"].forEach(k => S.meta[k] = S.meta[k] || {}); }
-  DECK = await IDB.get("deck");
+  applyTheme();
+  // Local check only: http://127.0.0.1:8091/app/web/?demo reads the built deck and library from this Mac, without signing in or syncing.
+  if (/^(127\.0\.0\.1|localhost)$/.test(location.hostname) && new URLSearchParams(location.search).has("demo")) {
+    DECK = await (await fetch("/data/cards.json")).json(); LIB = await (await fetch("/data/library.json")).json();
+    S = blankState(); S.session = "demo"; S.user = {id: "demo", email: "demo@recall.test", name: "Demo"}; indexDeck(); return go({name: "learn"});
+  }
+  DECK = await IDB.get("deck"); LIB = await IDB.get("lib");
   const fromGoogle = await googleFinish();
   if (fromGoogle && !S.session) return;
   if (!S.session) { view = {name: "login"}; return render(); }
-  if (DECK) { indexDeck(); view = {name: "today"}; render(); }
+  if (DECK) { indexDeck(); view = {name: "learn"}; render(); }
   await sync();
   if (!S.session) return;
   if (!DECK) { view = {name: "login", err: "Couldn't load your cards. Check the connection and sign in again."}; return render(); }
-  if (view.name === "boot") go({name: "today"});
+  if (view.name === "boot") go({name: "learn"});
 })();
+if ("speechSynthesis" in window) speechSynthesis.onvoiceschanged = () => { if (view.name === "settings") render(); };
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
 })();
 </script>
